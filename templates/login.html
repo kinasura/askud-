@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в систему - АСКУД</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a2530 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+        
+        .login-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .login-body {
+            padding: 40px;
+        }
+        
+        .auth-methods {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 25px;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            color: #6c757d;
+        }
+        
+        .auth-tab.active {
+            color: var(--secondary-color);
+            border-bottom: 3px solid var(--secondary-color);
+        }
+        
+        .input-group-icon {
+            position: relative;
+        }
+        
+        .input-group-icon i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            z-index: 10;
+        }
+        
+        .input-group-icon input {
+            padding-left: 45px;
+        }
+        
+        .forgot-password {
+            text-align: right;
+            margin-top: 10px;
+        }
+        
+        .login-footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        @media (max-width: 768px) {
+            .login-container {
+                margin: 15px;
+                border-radius: 15px;
+            }
+            
+            .login-body {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="login-container">
+                    <!-- Заголовок -->
+                    <div class="login-header">
+                        <h1 class="h3 mb-2">
+                            <i class="bi bi-shield-lock"></i> АСКУД
+                        </h1>
+                        <p class="mb-0">Автоматизированная система контроля доступа</p>
+                    </div>
+
+                    <!-- Сообщения -->
+                    <div class="login-body">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+                                        <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' if category == 'warning' else 'info-circle' }} me-2"></i>
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        <!-- Форма входа -->
+                        <form method="POST" action="{{ url_for('login') }}">
+                            <div class="mb-4">
+                                <div class="input-group-icon">
+                                    <i class="bi bi-person"></i>
+                                    <input type="text" class="form-control form-control-lg" 
+                                           id="username" name="username" 
+                                           placeholder="Введите логин" required autofocus>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="input-group-icon">
+                                    <i class="bi bi-key"></i>
+                                    <input type="password" class="form-control form-control-lg" 
+                                           id="password" name="password" 
+                                           placeholder="Введите пароль" required>
+                                </div>
+                                <div class="forgot-password">
+                                    <a href="#" class="text-muted small" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                                        <i class="bi bi-question-circle"></i> Забыли пароль?
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg py-3">
+                                    <i class="bi bi-box-arrow-in-right"></i> Войти в систему
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Альтернативные варианты -->
+                        <div class="text-center mt-4">
+                            <p class="text-muted mb-3">или</p>
+                            <div class="d-grid gap-2">
+                                <a href="/terminal" class="btn btn-outline-primary">
+                                    <i class="bi bi-terminal"></i> Перейти к терминалу доступа
+                                </a>
+                                <a href="/" class="btn btn-outline-secondary">
+                                    <i class="bi bi-house"></i> На главную страницу
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Информация -->
+                        <div class="alert alert-info mt-4">
+                            <div class="d-flex">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <div>
+                                    <small>
+                                        <strong>Тестовый доступ:</strong><br>
+                                        Администратор: логин "admin", пароль "admin123"<br>
+                                        Сотрудник: логин "ivanov", пароль "ivanov123"
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Футер -->
+                    <div class="login-footer">
+                        <small class="text-muted">
+                            <i class="bi bi-shield-check"></i> АО "КОНСИСТ-ОС" &copy; 2025<br>
+                            Версия системы: 2.0
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно восстановления пароля -->
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-key"></i> Восстановление пароля
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Для восстановления пароля обратитесь к системному администратору:</p>
+                    <ul>
+                        <li>Телефон: +7 (495) 123-45-67</li>
+                        <li>Email: support@askud.ru</li>
+                        <li>Кабинет: Корпус А, этаж 3, каб. 301</li>
+                    </ul>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Восстановление пароля доступно только при личном обращении с документом, удостоверяющим личность.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Фокус на поле ввода при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            const usernameField = document.getElementById('username');
+            if (usernameField) {
+                usernameField.focus();
+            }
+            
+            // Автозаполнение тестовых данных для удобства
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                document.getElementById('username').value = 'admin';
+                document.getElementById('password').value = 'admin123';
+            }
+        });
+    </script>
+</body>
+</html>

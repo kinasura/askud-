@@ -1,0 +1,18 @@
+# Основные зависимости
+Flask==2.3.3
+Werkzeug==2.3.7
+SQLAlchemy==2.0.19
+Flask-SQLAlchemy==3.0.5
+
+# Тестирование
+pytest==7.4.2
+pytest-flask==1.2.0
+pytest-cov==4.1.0
+pytest-mock==3.11.1
+
+# Документация API
+flasgger==0.9.7.1
+swagger-ui-bundle==1.0.0
+
+# Утилиты
+python-dotenv==1.0.0

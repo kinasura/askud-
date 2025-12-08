@@ -1,0 +1,493 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Управление правами доступа - АСКУД Админ{% endblock %}
+
+{% block page_title %}Управление правами доступа{% endblock %}
+{% block page_subtitle %}Настройка расписания доступа сотрудников к лабораториям{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-people"></i> Сотрудники
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="employeesList">
+                    {% for employee in employees %}
+                    <a href="#" class="list-group-item list-group-item-action employee-item" 
+                       data-id="{{ employee.id }}">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ employee.full_name }}</h6>
+                                <small class="text-muted">{{ employee.department or 'Без отдела' }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary rounded-pill">
+                                    {{ employee.accessible_labs_count or 0 }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small>
+                                <i class="bi bi-key"></i> PIN: {{ employee.pin_code }} | 
+                                <i class="bi bi-person"></i> {{ employee.login }}
+                            </small>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer bg-white">
+                <small class="text-muted">
+                    Всего сотрудников: {{ employees|length }}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-check"></i> Расписание доступа
+                </h5>
+                <button class="btn btn-primary btn-sm" id="addScheduleBtn" disabled>
+                    <i class="bi bi-plus-circle"></i> Добавить расписание
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- Состояние: сотрудник не выбран -->
+                <div id="noEmployeeSelected" class="text-center py-5">
+                    <i class="bi bi-person-lines-fill" style="font-size: 4rem; color: #6c757d;"></i>
+                    <h4 class="mt-3">Выберите сотрудника</h4>
+                    <p class="text-muted">Выберите сотрудника из списка слева для просмотра и редактирования его расписания доступа</p>
+                </div>
+
+                <!-- Состояние: расписание сотрудника -->
+                <div id="employeeSchedule" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h5 id="employeeName" class="mb-1"></h5>
+                            <p class="text-muted mb-0" id="employeeInfo"></p>
+                        </div>
+                        <div>
+                            <button class="btn btn-outline-primary btn-sm me-2" onclick="refreshSchedule()">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Таблица расписания -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Лаборатория</th>
+                                    <th>День недели</th>
+                                    <th>Время доступа</th>
+                                    <th>Длительность</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduleTableBody">
+                                <!-- Данные загружаются через JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i>
+                        <small>
+                            Сотрудник имеет доступ только в указанные дни и время. 
+                            Для добавления доступа в другие дни используйте кнопку "Добавить расписание".
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно добавления/редактирования расписания -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Добавление расписания доступа</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="scheduleForm">
+                    <input type="hidden" id="scheduleId">
+                    <input type="hidden" id="employeeId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Лаборатория *</label>
+                        <select class="form-select" id="laboratoryId" required>
+                            <option value="">Выберите лабораторию</option>
+                            {% for lab in laboratories %}
+                            <option value="{{ lab.id }}">{{ lab.name }} ({{ lab.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">День недели *</label>
+                        <select class="form-select" id="dayOfWeek" required>
+                            <option value="0">Понедельник</option>
+                            <option value="1">Вторник</option>
+                            <option value="2">Среда</option>
+                            <option value="3">Четверг</option>
+                            <option value="4">Пятница</option>
+                            <option value="5">Суббота</option>
+                            <option value="6">Воскресенье</option>
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Время начала *</label>
+                            <input type="time" class="form-control" id="timeStart" 
+                                   value="08:00" min="00:00" max="23:59" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Время окончания *</label>
+                            <input type="time" class="form-control" id="timeEnd" 
+                                   value="18:00" min="00:00" max="23:59" required>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <small>
+                            Обратите внимание: время окончания должно быть больше времени начала. 
+                            Для круглосуточного доступа укажите время с 00:00 до 23:59.
+                        </small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveScheduleBtn">
+                    <span id="saveBtnText">Сохранить</span>
+                    <span class="spinner-border spinner-border-sm d-none" id="saveSpinner"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentEmployeeId = null;
+    let currentEmployeeName = '';
+    
+    // Названия дней недели
+    const daysOfWeek = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+    
+    // Загрузка расписания сотрудника
+    function loadEmployeeSchedule(employeeId, employeeName, employeeInfo) {
+        currentEmployeeId = employeeId;
+        currentEmployeeName = employeeName;
+        
+        // Показываем блок с расписанием
+        document.getElementById('noEmployeeSelected').style.display = 'none';
+        document.getElementById('employeeSchedule').style.display = 'block';
+        
+        // Обновляем информацию о сотруднике
+        document.getElementById('employeeName').textContent = employeeName;
+        document.getElementById('employeeInfo').textContent = employeeInfo;
+        
+        // Активируем кнопку добавления
+        document.getElementById('addScheduleBtn').disabled = false;
+        
+        // Загружаем расписание
+        refreshSchedule();
+    }
+    
+    // Обновление расписания
+    function refreshSchedule() {
+        if (!currentEmployeeId) return;
+        
+        fetch(`/api/admin/employees/${currentEmployeeId}/access`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const tbody = document.getElementById('scheduleTableBody');
+                    tbody.innerHTML = '';
+                    
+                    if (data.access_rights && data.access_rights.length > 0) {
+                        data.access_rights.forEach(schedule => {
+                            // Вычисляем длительность
+                            const start = schedule.time_start;
+                            const end = schedule.time_end;
+                            const duration = calculateDuration(start, end);
+                            
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>
+                                    <strong>${schedule.laboratory_name}</strong><br>
+                                    <small class="text-muted">${schedule.laboratory_code}</small>
+                                </td>
+                                <td>${daysOfWeek[schedule.day_of_week] || 'Неизвестно'}</td>
+                                <td>
+                                    <span class="badge bg-primary">${start}</span> - 
+                                    <span class="badge bg-secondary">${end}</span>
+                                </td>
+                                <td>${duration}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning me-1" 
+                                            onclick="editSchedule(${schedule.id}, ${schedule.laboratory_id}, ${schedule.day_of_week}, '${start}', '${end}')">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" 
+                                            onclick="deleteSchedule(${schedule.id})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    } else {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <i class="bi bi-calendar-x" style="font-size: 2rem; color: #6c757d;"></i>
+                                    <p class="mt-2 mb-0">У сотрудника нет настроенного расписания</p>
+                                    <small class="text-muted">Добавьте расписание доступа, используя кнопку выше</small>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                } else {
+                    showError('Ошибка загрузки расписания');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                showError('Ошибка соединения с сервером');
+            });
+    }
+    
+    // Вычисление длительности
+    function calculateDuration(start, end) {
+        const startTime = new Date(`2000-01-01T${start}`);
+        const endTime = new Date(`2000-01-01T${end}`);
+        
+        let diff = endTime - startTime;
+        if (diff < 0) diff += 24 * 60 * 60 * 1000; // Если переход через полночь
+        
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        if (hours === 24 && minutes === 0) {
+            return '24 часа';
+        } else if (hours === 0) {
+            return `${minutes} мин.`;
+        } else if (minutes === 0) {
+            return `${hours} час.`;
+        } else {
+            return `${hours} час. ${minutes} мин.`;
+        }
+    }
+    
+    // Редактирование расписания
+    function editSchedule(scheduleId, labId, day, start, end) {
+        document.getElementById('modalTitle').textContent = 'Редактирование расписания';
+        document.getElementById('scheduleId').value = scheduleId;
+        document.getElementById('employeeId').value = currentEmployeeId;
+        document.getElementById('laboratoryId').value = labId;
+        document.getElementById('dayOfWeek').value = day;
+        document.getElementById('timeStart').value = start;
+        document.getElementById('timeEnd').value = end;
+        
+        const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+        modal.show();
+    }
+    
+    // Удаление расписания
+    function deleteSchedule(scheduleId) {
+        if (confirm('Вы уверены, что хотите удалить это расписание доступа?')) {
+            fetch(`/api/admin/employees/${currentEmployeeId}/access/${scheduleId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess('Расписание удалено');
+                    refreshSchedule();
+                } else {
+                    showError('Ошибка: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                showError('Ошибка соединения с сервером');
+            });
+        }
+    }
+    
+    // Показать сообщение об успехе
+    function showSuccess(message) {
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-success alert-dismissible fade show';
+        alert.innerHTML = `
+            <i class="bi bi-check-circle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.container-fluid').prepend(alert);
+        
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 3000);
+    }
+    
+    // Показать сообщение об ошибке
+    function showError(message) {
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.innerHTML = `
+            <i class="bi bi-exclamation-triangle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.container-fluid').prepend(alert);
+    }
+    
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', function() {
+        // Обработка выбора сотрудника
+        document.querySelectorAll('.employee-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Убираем активный класс у всех элементов
+                document.querySelectorAll('.employee-item').forEach(i => {
+                    i.classList.remove('active');
+                });
+                
+                // Добавляем активный класс выбранному элементу
+                this.classList.add('active');
+                
+                // Получаем данные сотрудника
+                const employeeId = this.dataset.id;
+                const employeeName = this.querySelector('h6').textContent;
+                const employeeInfo = this.querySelector('.text-muted').textContent;
+                
+                // Загружаем расписание сотрудника
+                loadEmployeeSchedule(employeeId, employeeName, employeeInfo);
+            });
+        });
+        
+        // Кнопка добавления расписания
+        document.getElementById('addScheduleBtn').addEventListener('click', function() {
+            if (!currentEmployeeId) {
+                alert('Выберите сотрудника');
+                return;
+            }
+            
+            // Сброс формы
+            document.getElementById('scheduleForm').reset();
+            document.getElementById('modalTitle').textContent = 'Добавление расписания доступа';
+            document.getElementById('employeeId').value = currentEmployeeId;
+            document.getElementById('scheduleId').value = '';
+            document.getElementById('timeStart').value = '08:00';
+            document.getElementById('timeEnd').value = '18:00';
+            
+            // Показ модального окна
+            const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+            modal.show();
+        });
+        
+        // Сохранение расписания
+        document.getElementById('saveScheduleBtn').addEventListener('click', function() {
+            const scheduleId = document.getElementById('scheduleId').value;
+            const employeeId = document.getElementById('employeeId').value;
+            
+            const scheduleData = {
+                laboratory_id: document.getElementById('laboratoryId').value,
+                day_of_week: document.getElementById('dayOfWeek').value,
+                time_start: document.getElementById('timeStart').value,
+                time_end: document.getElementById('timeEnd').value
+            };
+            
+            // Валидация
+            if (!scheduleData.laboratory_id) {
+                alert('Выберите лабораторию');
+                return;
+            }
+            
+            if (scheduleData.time_start >= scheduleData.time_end) {
+                alert('Время окончания должно быть больше времени начала');
+                return;
+            }
+            
+            // Показать спиннер
+            const saveBtn = document.getElementById('saveScheduleBtn');
+            const saveText = document.getElementById('saveBtnText');
+            const spinner = document.getElementById('saveSpinner');
+            
+            saveText.classList.add('d-none');
+            spinner.classList.remove('d-none');
+            saveBtn.disabled = true;
+            
+            // Определяем URL и метод
+            const url = scheduleId 
+                ? `/api/admin/employees/${employeeId}/access/${scheduleId}`
+                : `/api/admin/employees/${employeeId}/access`;
+            
+            const method = scheduleId ? 'PUT' : 'POST';
+            
+            // Отправка запроса
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(scheduleData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Скрыть спиннер
+                saveText.classList.remove('d-none');
+                spinner.classList.add('d-none');
+                saveBtn.disabled = false;
+                
+                if (data.success) {
+                    // Закрываем модальное окно
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleModal'));
+                    modal.hide();
+                    
+                    // Показываем сообщение об успехе
+                    showSuccess(scheduleId ? 'Расписание обновлено' : 'Расписание добавлено');
+                    
+                    // Обновляем расписание
+                    refreshSchedule();
+                } else {
+                    showError('Ошибка: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                
+                // Скрыть спиннер
+                saveText.classList.remove('d-none');
+                spinner.classList.add('d-none');
+                saveBtn.disabled = false;
+                
+                showError('Ошибка соединения с сервером');
+            });
+        });
+        
+        // Выбираем первого сотрудника по умолчанию
+        const firstEmployee = document.querySelector('.employee-item');
+        if (firstEmployee) {
+            firstEmployee.click();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+
+{% block title %}Панель сотрудника - АСКУД{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <div>
+            <h1 class="h2 mb-0">Панель сотрудника</h1>
+            <p class="text-muted mb-0">Добро пожаловать, {{ employee.full_name }}!</p>
+        </div>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <a href="/terminal" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-terminal"></i> Терминал доступа
+                </a>
+                <a href="/logout" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-box-arrow-right"></i> Выйти
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Карточка сотрудника -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="bi bi-person-fill" style="font-size: 1.5rem;"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-0">{{ employee.full_name }}</h5>
+                            <p class="card-text text-muted mb-0">{{ employee.position or 'Сотрудник' }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <small class="text-muted">Отдел</small>
+                                <p class="mb-0 fw-bold">{{ employee.department or 'Не указан' }}</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <small class="text-muted">PIN-код</small>
+                                <p class="mb-0 fw-bold">
+                                    <span class="badge bg-secondary">{{ employee.pin_code }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <small class="text-muted">Логин</small>
+                        <p class="mb-0 fw-bold">{{ employee.login }}</p>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <small class="text-muted">Статус</small>
+                        <p class="mb-0">
+                            {% if employee.is_active %}
+                                <span class="badge bg-success">Активен</span>
+                            {% else %}
+                                <span class="badge bg-danger">Неактивен</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">Дата регистрации</small>
+                        <p class="mb-0">{{ employee.created_at[:10] }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <!-- Доступные лаборатории -->
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-building"></i> Доступные лаборатории
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if accessible_labs %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Лаборатория</th>
+                                        <th>Код</th>
+                                        <th>Местоположение</th>
+                                        <th>Вместимость</th>
+                                        <th>Статус</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lab in accessible_labs %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ lab.name }}</strong><br>
+                                            <small class="text-muted">{{ lab.description or 'Описание отсутствует' }}</small>
+                                        </td>
+                                        <td><span class="badge bg-primary">{{ lab.code }}</span></td>
+                                        <td>{{ lab.location }}</td>
+                                        <td>{{ lab.capacity }} чел.</td>
+                                        <td>
+                                            {% if lab.is_active %}
+                                                <span class="badge bg-success">Доступна</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Недоступна</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-building-x" style="font-size: 3rem; color: #6c757d;"></i>
+                            <h5 class="mt-3">Нет доступных лабораторий</h5>
+                            <p class="text-muted">Обратитесь к администратору для получения доступа к лабораториям</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Последние события -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-clock-history"></i> История событий
+            </h5>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="refreshEvents()">
+                    <i class="bi bi-arrow-clockwise"></i> Обновить
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if recent_events %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Дата и время</th>
+                                <th>Лаборатория</th>
+                                <th>Событие</th>
+                                <th>Статус</th>
+                                <th>Метод</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventsTableBody">
+                            {% for event in recent_events %}
+                            <tr>
+                                <td>{{ event.event_time }}</td>
+                                <td>{{ event.name }}</td>
+                                <td>
+                                    {% if event.event_type == 'entry' %}
+                                        <span class="badge bg-primary">Вход</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Выход</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if event.success %}
+                                        <span class="badge bg-success">Успешно</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Отказ</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if event.method == 'pin' %}
+                                        <span class="badge bg-info">PIN-код</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Логин</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-activity" style="font-size: 3rem; color: #6c757d;"></i>
+                    <h5 class="mt-3">Нет событий</h5>
+                    <p class="text-muted">История ваших входов и выходов появится здесь</p>
+                </div>
+            {% endif %}
+        </div>
+        <div class="card-footer bg-white">
+            <small class="text-muted">
+                Показано последних {{ recent_events|length }} событий
+            </small>
+        </div>
+    </div>
+
+    <!-- Быстрые действия -->
+    <div class="row mt-4">
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-terminal" style="font-size: 2.5rem; color: #0d6efd;"></i>
+                    </div>
+                    <h5>Терминал доступа</h5>
+                    <p class="text-muted">Используйте PIN-код или логин для входа/выхода в лаборатории</p>
+                    <a href="/terminal" class="btn btn-primary w-100">
+                        <i class="bi bi-arrow-right"></i> Открыть терминал
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-calendar-check" style="font-size: 2.5rem; color: #198754;"></i>
+                    </div>
+                    <h5>Ваше расписание</h5>
+                    <p class="text-muted">Просмотр времени доступа в лаборатории по дням недели</p>
+                    <button class="btn btn-success w-100" onclick="showSchedule()">
+                        <i class="bi bi-clock"></i> Посмотреть расписание
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-question-circle" style="font-size: 2.5rem; color: #6c757d;"></i>
+                    </div>
+                    <h5>Помощь</h5>
+                    <p class="text-muted">Инструкции по использованию системы и контакты поддержки</p>
+                    <button class="btn btn-secondary w-100" data-bs-toggle="modal" data-bs-target="#helpModal">
+                        <i class="bi bi-info-circle"></i> Получить помощь
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно помощи -->
+<div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-question-circle"></i> Помощь и поддержка
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Как использовать систему:</h6>
+                <ul>
+                    <li>Для входа/выхода в лаборатории используйте терминал доступа</li>
+                    <li>Вы можете использовать PIN-код или логин с паролем</li>
+                    <li>Доступ разрешен только в рабочее время согласно вашему расписанию</li>
+                </ul>
+                
+                <h6 class="mt-4">Контакты поддержки:</h6>
+                <ul>
+                    <li>Телефон: +7 (495) 123-45-67</li>
+                    <li>Email: support@askud.ru</li>
+                    <li>Администратор: каб. 301, Корпус А, 3 этаж</li>
+                </ul>
+                
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    При утере PIN-кода или пароля обратитесь к администратору лично с документом, удостоверяющим личность.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно расписания -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-clock"></i> Ваше расписание доступа
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center" id="scheduleLoading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                    <p class="mt-2">Загрузка расписания...</p>
+                </div>
+                <div id="scheduleContent" style="display: none;">
+                    <!-- Расписание будет загружено через JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Обновление событий
+    function refreshEvents() {
+        fetch('/employee/dashboard')
+            .then(response => response.text())
+            .then(html => {
+                // Здесь можно обновить таблицу событий через AJAX
+                // Для простоты перезагружаем страницу
+                location.reload();
+            });
+    }
+    
+    // Показать расписание
+    function showSchedule() {
+        const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+        modal.show();
+        
+        // Загрузка расписания через API
+        fetch('/api/admin/employees/{{ employee.id }}/access')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('scheduleLoading').style.display = 'none';
+                const content = document.getElementById('scheduleContent');
+                content.style.display = 'block';
+                
+                if (data.success && data.access_rights.length > 0) {
+                    let html = '<div class="table-responsive"><table class="table table-hover">';
+                    html += '<thead><tr><th>Лаборатория</th><th>День</th><th>Время доступа</th></tr></thead><tbody>';
+                    
+                    const days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+                    
+                    data.access_rights.forEach(schedule => {
+                        html += `
+                            <tr>
+                                <td>${schedule.laboratory_name}</td>
+                                <td>${days[schedule.day_of_week] || 'Неизвестно'}</td>
+                                <td>${schedule.time_start} - ${schedule.time_end}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table></div>';
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="bi bi-calendar-x" style="font-size: 3rem; color: #6c757d;"></i>
+                            <h5 class="mt-3">Расписание не настроено</h5>
+                            <p class="text-muted">Обратитесь к администратору для настройки расписания доступа</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки расписания:', error);
+                document.getElementById('scheduleLoading').style.display = 'none';
+                document.getElementById('scheduleContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Ошибка загрузки расписания. Попробуйте позже.
+                    </div>
+                `;
+                document.getElementById('scheduleContent').style.display = 'block';
+            });
+    }
+    
+    // Автоматическое обновление событий каждые 30 секунд
+    setInterval(refreshEvents, 30000);
+</script>
+{% endblock %}

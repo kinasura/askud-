@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Админ-панель АСКУД{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --sidebar-width: 250px;
+            --header-height: 56px;
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar-admin {
+            background: var(--primary-color);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: var(--header-height);
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: var(--header-height);
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            z-index: 100;
+            overflow-y: auto;
+        }
+        
+        .sidebar-sticky {
+            padding: 20px 0;
+        }
+        
+        .sidebar .nav-link {
+            color: #555;
+            padding: 12px 20px;
+            margin: 2px 10px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .sidebar .nav-link:hover {
+            background: #f0f7ff;
+            color: var(--secondary-color);
+            transform: translateX(5px);
+        }
+        
+        .sidebar .nav-link.active {
+            background: var(--secondary-color);
+            color: white;
+            box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
+        }
+        
+        .sidebar .nav-link i {
+            width: 20px;
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            min-height: calc(100vh - var(--header-height));
+        }
+        
+        .stat-card {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s;
+            overflow: hidden;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card .card-body {
+            padding: 1.5rem;
+        }
+        
+        .stat-icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+        
+        .badge-online {
+            background-color: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .btn-action {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2px;
+        }
+        
+        .page-header {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 60px;
+            }
+            
+            .sidebar .nav-link span {
+                display: none;
+            }
+            
+            .sidebar .nav-link i {
+                margin-right: 0;
+                font-size: 1.3rem;
+            }
+            
+            .main-content {
+                margin-left: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигационная панель -->
+    <nav class="navbar navbar-admin navbar-expand fixed-top">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-link text-white me-3 d-md-none" id="sidebarToggle">
+                    <i class="bi bi-list" style="font-size: 1.5rem;"></i>
+                </button>
+                <a class="navbar-brand text-white fw-bold" href="{{ url_for('admin_dashboard') }}">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    АСКУД Админ
+                </a>
+                <span class="badge bg-light text-dark ms-2">v2.0</span>
+            </div>
+            
+            <div class="navbar-nav">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" role="button" 
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle me-1"></i>
+                        {{ session.get('user_name', 'Администратор') }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> Панель управления
+                        </a></li>
+                        <li><a class="dropdown-item" href="/terminal" target="_blank">
+                            <i class="bi bi-terminal"></i> Терминал доступа
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                            <i class="bi bi-box-arrow-right"></i> Выйти
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Боковая панель -->
+    <div class="sidebar d-none d-md-block">
+        <div class="sidebar-sticky">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}" 
+                    href="{{ url_for('admin_dashboard') }}">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Панель управления</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'admin_employees' %}active{% endif %}" 
+                    href="{{ url_for('admin_employees') }}">
+                        <i class="bi bi-people"></i>
+                        <span>Сотрудники</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'admin_access_rights' %}active{% endif %}" 
+                    href="{{ url_for('admin_access_rights') }}">
+                        <i class="bi bi-key"></i>
+                        <span>Права доступа</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'admin_reports' %}active{% endif %}" 
+                    href="{{ url_for('admin_reports') }}">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Отчёты</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'admin_import_export' %}active{% endif %}" 
+                    href="{{ url_for('admin_import_export') }}">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span>Импорт/Экспорт</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'admin_statistics' %}active{% endif %}" 
+                    href="{{ url_for('admin_statistics') }}">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Статистика</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-4">
+                    <div class="px-3">
+                        <small class="text-muted">БЫСТРЫЙ ДОСТУП</small>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/terminal" target="_blank">
+                        <i class="bi bi-terminal"></i>
+                        <span>Терминал доступа</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/" target="_blank">
+                        <i class="bi bi-house"></i>
+                        <span>Главная страница</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- Статус системы -->
+            <div class="px-3 mt-4">
+                <div class="card border-0 bg-light">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <div class="badge badge-online rounded-circle" style="width: 10px; height: 10px;"></div>
+                            </div>
+                            <div>
+                                <small class="text-muted">Статус системы</small>
+                                <div class="fw-bold">Онлайн</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <main class="main-content">
+        <!-- Флеш-сообщения -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' if category == 'warning' else 'info-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Заголовок страницы -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">{% block page_title %}{% endblock %}</h1>
+                    <p class="text-muted mb-0">{% block page_subtitle %}{% endblock %}</p>
+                </div>
+                <div>
+                    {% block page_actions %}{% endblock %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Содержимое страницы -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Переключение боковой панели на мобильных устройствах
+        document.getElementById('sidebarToggle')?.addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('d-none');
+        });
+        
+        // Автоматическое скрытие алертов через 5 секунд
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                });
+            }, 5000);
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

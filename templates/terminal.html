@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Терминал доступа - АСКУД</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a2530 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .terminal-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .terminal-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .auth-method-tabs {
+            display: flex;
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .auth-tab.active {
+            color: var(--secondary-color);
+            border-bottom: 3px solid var(--secondary-color);
+        }
+        
+        .input-group-lg {
+            margin-bottom: 15px;
+        }
+        
+        .pin-display {
+            font-size: 2rem;
+            letter-spacing: 10px;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            border: 3px solid #e9ecef;
+            border-radius: 10px;
+            background: #f8f9fa;
+            margin: 10px 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .pin-display.valid {
+            border-color: var(--success-color);
+            background: #f0fff4;
+        }
+        
+        .pin-display.invalid {
+            border-color: var(--danger-color);
+            background: #fff5f5;
+        }
+        
+        .virtual-keyboard {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .keypad-btn {
+            height: 60px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 5px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .keypad-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .keypad-btn:active {
+            transform: translateY(0);
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .status-online {
+            background-color: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
+        }
+        
+        .current-presence {
+            background: #e8f4fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .current-presence-item {
+            padding: 8px;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 0.9rem;
+        }
+        
+        .current-presence-item:last-child {
+            border-bottom: none;
+        }
+        
+        .time-display {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+        }
+        
+        .laboratory-card {
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .laboratory-card:hover {
+            border-color: var(--secondary-color);
+            background: #f0f7ff;
+        }
+        
+        .laboratory-card.selected {
+            border-color: var(--success-color);
+            background: #f0fff4;
+        }
+        
+        .capacity-indicator {
+            height: 5px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .capacity-fill {
+            height: 100%;
+            background: var(--success-color);
+            border-radius: 3px;
+        }
+        
+        @media (max-width: 768px) {
+            .terminal-container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .keypad-btn {
+                height: 50px;
+                font-size: 1.1rem;
+            }
+            
+            .pin-display {
+                font-size: 1.5rem;
+                letter-spacing: 6px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="terminal-container">
+                    <!-- Заголовок -->
+                    <div class="terminal-header text-center">
+                        <h1 class="h3 mb-2">
+                            <i class="bi bi-shield-lock"></i> АСКУД
+                        </h1>
+                        <p class="mb-0">Автоматизированная система контроля и учёта доступа</p>
+                        <div class="mt-2">
+                            <span class="status-indicator status-online"></span>
+                            <small>Система онлайн</small>
+                        </div>
+                    </div>
+
+                    <!-- Основной контент -->
+                    <div class="p-4">
+                        <!-- Выбор лаборатории -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="bi bi-building"></i> Выберите лабораторию:
+                            </h5>
+                            <div id="laboratoriesList">
+                                <!-- Лаборатории будут загружены через JavaScript -->
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Загрузка...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Метод аутентификации -->
+                        <div class="auth-method-tabs">
+                            <button class="auth-tab active" data-method="pin">
+                                <i class="bi bi-key"></i> PIN-код
+                            </button>
+                            <button class="auth-tab" data-method="login">
+                                <i class="bi bi-person-badge"></i> Логин
+                            </button>
+                        </div>
+
+                        <!-- PIN-авторизация (по умолчанию) -->
+                        <div id="pinAuth" class="auth-section">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Введите PIN-код:</label>
+                                <div class="pin-display" id="pinDisplay">
+                                    <span class="text-muted">Введите PIN-код</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted">
+                                        Длина PIN: {{ min_pin_length }}-{{ max_pin_length }} цифр
+                                    </small>
+                                    <small id="pinLengthIndicator" class="text-muted">0/{{ max_pin_length }}</small>
+                                </div>
+                            </div>
+
+                            <!-- Виртуальная клавиатура -->
+                            <div class="virtual-keyboard">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-4">
+                                        <button class="btn btn-light keypad-btn w-100" data-digit="1">1</button>
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="btn btn-light keypad-btn w-100" data-digit="2">2</button>
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="btn btn-light keypad-btn w-100" data-digit="3">3</button>
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-4">
+                                        <button class="btn btn-light keypad-btn w-100" data-digit="4">4</button>
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="btn btn-light keypad-btn w-100" data-digit="5">5</button>
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="btn btn-light keypad-btn w-100" data-digit="6">6</button>
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-4">
+                                        <button class="btn btn-light keypad-btn w-100" data-digit="7">7</button>
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="btn btn-light keypad-btn w-100" data-digit="8">8</button>
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="btn btn-light keypad-btn w-100" data-digit="9">9</button>
+                                    </div>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <button class="btn btn-warning keypad-btn w-100" id="clearBtn">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="btn btn-light keypad-btn w-100" data-digit="0">0</button>
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="btn btn-danger keypad-btn w-100" id="backspaceBtn">
+                                            <i class="bi bi-backspace"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Логин-авторизация (скрыта по умолчанию) -->
+                        <div id="loginAuth" class="auth-section" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Логин:</label>
+                                <input type="text" class="form-control form-control-lg" id="loginInput" 
+                                       placeholder="Введите логин">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Пароль:</label>
+                                <input type="password" class="form-control form-control-lg" id="passwordInput" 
+                                       placeholder="Введите пароль">
+                            </div>
+                        </div>
+
+                        <!-- Статусное сообщение -->
+                        <div id="statusMessage" class="alert alert-info d-none mt-3">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" role="status" id="statusSpinner">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                                <span id="statusText"></span>
+                            </div>
+                        </div>
+
+                        <!-- Кнопка подтверждения -->
+                        <button class="btn btn-primary btn-lg w-100 mt-3 py-3" id="submitBtn">
+                            <i class="bi bi-door-open"></i> ВХОД / ВЫХОД
+                        </button>
+
+                        <!-- Текущие сотрудники в лаборатории -->
+                        <div class="current-presence mt-4">
+                            <h6 class="mb-3">
+                                <i class="bi bi-people"></i> Сейчас в выбранной лаборатории:
+                            </h6>
+                            <div id="currentPresenceList">
+                                <div class="text-muted text-center">Выберите лабораторию</div>
+                            </div>
+                        </div>
+
+                        <!-- Время и дата -->
+                        <div class="text-center mt-3">
+                            <div class="time-display" id="currentTime">00:00:00</div>
+                            <div class="text-muted" id="currentDate">1 января 2025</div>
+                        </div>
+                    </div>
+
+                    <!-- Футер -->
+                    <div class="card-footer bg-light text-center py-2">
+                        <small class="text-muted">
+                            АО "КОНСИСТ-ОС" &copy; 2025 | Версия 2.0
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Глобальные переменные
+        let currentPin = '';
+        let selectedLabId = null;
+        let currentAuthMethod = 'pin';
+        const minPinLength = {{ min_pin_length }};
+        const maxPinLength = {{ max_pin_length }};
+        
+        // Обновление времени
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = 
+                now.toLocaleTimeString('ru-RU');
+            document.getElementById('currentDate').textContent = 
+                now.toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+        }
+        
+        // Загрузка лабораторий
+        function loadLaboratories() {
+            fetch('/api/laboratories')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('laboratoriesList');
+                    container.innerHTML = '';
+                    
+                    data.laboratories.forEach(lab => {
+                        const capacityPercent = (lab.current_count / lab.capacity) * 100;
+                        const labCard = document.createElement('div');
+                        labCard.className = 'laboratory-card';
+                        labCard.dataset.labId = lab.id;
+                        labCard.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">${lab.name}</h6>
+                                    <small class="text-muted">${lab.location}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-primary">${lab.code}</span>
+                                    <div class="small">${lab.current_count}/${lab.capacity}</div>
+                                </div>
+                            </div>
+                            <div class="capacity-indicator">
+                                <div class="capacity-fill" style="width: ${Math.min(capacityPercent, 100)}%"></div>
+                            </div>
+                        `;
+                        
+                        labCard.addEventListener('click', () => selectLaboratory(lab.id, labCard));
+                        container.appendChild(labCard);
+                    });
+                    
+                    // Выбираем первую лабораторию по умолчанию
+                    if (data.laboratories.length > 0) {
+                        selectLaboratory(data.laboratories[0].id, container.firstElementChild);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки лабораторий:', error);
+                });
+        }
+        
+        // Загрузка текущих сотрудников в лаборатории
+        function loadCurrentPresence(labId) {
+            if (!labId) return;
+            
+            fetch(`/api/laboratory_presence?lab_id=${labId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('currentPresenceList');
+                    
+                    if (data.people.length === 0) {
+                        container.innerHTML = '<div class="text-muted text-center">Нет сотрудников</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = '';
+                    data.people.forEach(person => {
+                        const entryTime = new Date(person.entry_time);
+                        const duration = Math.floor((new Date() - entryTime) / 60000); // в минутах
+                        
+                        const item = document.createElement('div');
+                        item.className = 'current-presence-item';
+                        item.innerHTML = `
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>${person.full_name}</strong>
+                                    <br>
+                                    <small class="text-muted">Вошел: ${entryTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}</small>
+                                </div>
+                                <div class="text-end">
+                                    <small>${duration} мин.</small>
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(item);
+                    });
+                });
+        }
+        
+        // Выбор лаборатории
+        function selectLaboratory(labId, element) {
+            selectedLabId = labId;
+            
+            // Снимаем выделение со всех карточек
+            document.querySelectorAll('.laboratory-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Выделяем выбранную
+            element.classList.add('selected');
+            
+            // Загружаем текущих сотрудников
+            loadCurrentPresence(labId);
+        }
+        
+        // Управление PIN-кодом
+        function addDigit(digit) {
+            if (currentPin.length < maxPinLength) {
+                currentPin += digit;
+                updatePinDisplay();
+            }
+        }
+        
+        function backspace() {
+            if (currentPin.length > 0) {
+                currentPin = currentPin.slice(0, -1);
+                updatePinDisplay();
+            }
+        }
+        
+        function clearPin() {
+            currentPin = '';
+            updatePinDisplay();
+        }
+        
+        function updatePinDisplay() {
+            const display = document.getElementById('pinDisplay');
+            const lengthIndicator = document.getElementById('pinLengthIndicator');
+            
+            if (currentPin.length === 0) {
+                display.innerHTML = '<span class="text-muted">Введите PIN-код</span>';
+                display.classList.remove('valid', 'invalid');
+            } else {
+                let dots = '';
+                for (let i = 0; i < currentPin.length; i++) {
+                    dots += '●';
+                }
+                display.textContent = dots;
+                
+                if (currentPin.length >= minPinLength && currentPin.length <= maxPinLength) {
+                    display.classList.add('valid');
+                    display.classList.remove('invalid');
+                } else if (currentPin.length > maxPinLength) {
+                    display.classList.add('invalid');
+                    display.classList.remove('valid');
+                } else {
+                    display.classList.remove('valid', 'invalid');
+                }
+            }
+            
+            lengthIndicator.textContent = `${currentPin.length}/${maxPinLength}`;
+        }
+        
+        // Показать/скрыть статусное сообщение
+        function showStatus(message, type = 'info', showSpinner = false) {
+            const statusEl = document.getElementById('statusMessage');
+            const statusText = document.getElementById('statusText');
+            const statusSpinner = document.getElementById('statusSpinner');
+            
+            statusText.textContent = message;
+            statusEl.className = `alert alert-${type}`;
+            statusEl.classList.remove('d-none');
+            
+            if (showSpinner) {
+                statusSpinner.classList.remove('d-none');
+            } else {
+                statusSpinner.classList.add('d-none');
+            }
+        }
+        
+        function hideStatus() {
+            document.getElementById('statusMessage').classList.add('d-none');
+        }
+        
+        // Отправка данных аутентификации
+        function submitAuthentication() {
+            if (!selectedLabId) {
+                showStatus('Выберите лабораторию', 'warning');
+                return;
+            }
+            
+            let requestData = {
+                laboratory_id: selectedLabId
+            };
+            
+            if (currentAuthMethod === 'pin') {
+                if (currentPin.length < minPinLength) {
+                    showStatus(`PIN-код должен содержать не менее ${minPinLength} цифр`, 'warning');
+                    return;
+                }
+                
+                if (currentPin.length > maxPinLength) {
+                    showStatus(`PIN-код должен содержать не более ${maxPinLength} цифр`, 'warning');
+                    return;
+                }
+                
+                if (!/^\d+$/.test(currentPin)) {
+                    showStatus('PIN-код должен содержать только цифры', 'warning');
+                    return;
+                }
+                
+                requestData.pin_code = currentPin;
+            } else {
+                const login = document.getElementById('loginInput').value.trim();
+                const password = document.getElementById('passwordInput').value.trim();
+                
+                if (!login || !password) {
+                    showStatus('Введите логин и пароль', 'warning');
+                    return;
+                }
+                
+                requestData.login = login;
+                requestData.password = password;
+            }
+            
+            showStatus('Проверка доступа...', 'info', true);
+            
+            fetch('/api/verify_access', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus(`✅ ${data.message}`, 'success');
+                    
+                    // Обновляем список присутствующих
+                    loadCurrentPresence(selectedLabId);
+                    
+                    // Очищаем форму
+                    if (currentAuthMethod === 'pin') {
+                        setTimeout(() => {
+                            currentPin = '';
+                            updatePinDisplay();
+                            hideStatus();
+                        }, 2000);
+                    } else {
+                        setTimeout(() => {
+                            document.getElementById('loginInput').value = '';
+                            document.getElementById('passwordInput').value = '';
+                            hideStatus();
+                        }, 2000);
+                    }
+                } else {
+                    showStatus(`❌ ${data.message}`, 'danger');
+                    
+                    // Очищаем PIN при ошибке
+                    if (currentAuthMethod === 'pin') {
+                        currentPin = '';
+                        updatePinDisplay();
+                    }
+                    
+                    setTimeout(hideStatus, 3000);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка сети:', error);
+                showStatus('❌ Ошибка соединения с сервером', 'danger');
+                setTimeout(hideStatus, 3000);
+            });
+        }
+        
+        // Переключение метода аутентификации
+        function switchAuthMethod(method) {
+            currentAuthMethod = method;
+            
+            // Обновляем активную вкладку
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                if (tab.dataset.method === method) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            // Показываем/скрываем соответствующие секции
+            document.querySelectorAll('.auth-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            document.getElementById(`${method}Auth`).style.display = 'block';
+        }
+        
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Терминал АСКУД версии 2.0 инициализирован');
+            
+            // Обновление времени каждую секунду
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            // Загружаем лаборатории
+            loadLaboratories();
+            
+            // Обработчики для цифровых кнопок
+            document.querySelectorAll('[data-digit]').forEach(button => {
+                button.addEventListener('click', function() {
+                    addDigit(this.getAttribute('data-digit'));
+                });
+            });
+            
+            // Обработчики для управления
+            document.getElementById('clearBtn').addEventListener('click', clearPin);
+            document.getElementById('backspaceBtn').addEventListener('click', backspace);
+            document.getElementById('submitBtn').addEventListener('click', submitAuthentication);
+            
+            // Переключение метода аутентификации
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    switchAuthMethod(this.dataset.method);
+                });
+            });
+            
+            // Обработка физической клавиатуры
+            document.addEventListener('keydown', function(event) {
+                if (currentAuthMethod === 'pin') {
+                    if (event.key >= '0' && event.key <= '9') {
+                        addDigit(event.key);
+                    } else if (event.key === 'Enter') {
+                        submitAuthentication();
+                    } else if (event.key === 'Escape') {
+                        clearPin();
+                    } else if (event.key === 'Backspace') {
+                        event.preventDefault();
+                        backspace();
+                    }
+                }
+            });
+            
+            // Фокус на поле ввода
+            if (currentAuthMethod === 'pin') {
+                document.getElementById('pinDisplay').focus();
+            } else {
+                document.getElementById('loginInput').focus();
+            }
+        });
+        
+        // API эндпоинты (заглушки)
+        fetch('/api/laboratories')
+            .then(response => response.json())
+            .then(data => console.log('API лабораторий:', data));
+        
+        fetch('/api/laboratory_presence?lab_id=1')
+            .then(response => response.json())
+            .then(data => console.log('API присутствия:', data));
+    </script>
+</body>
+</html>

@@ -1,0 +1,973 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Управление сотрудниками - АСКУД Админ{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Управление сотрудниками</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+            <i class="bi bi-person-plus"></i> Добавить сотрудника
+        </button>
+    </div>
+</div>
+
+<!-- Таблица сотрудников -->
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>ФИО</th>
+                <th>PIN-код</th>
+                <th>Отдел</th>
+                <th>Доступ к лабораториям</th>
+                <th>Статус</th>
+                <th>Дата создания</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody id="employeesTableBody">
+            {% for emp in employees %}
+            <tr data-employee-id="{{ emp.id }}">
+                <td>{{ emp.id }}</td>
+                <td>{{ emp.full_name }}</td>
+                <td><span class="badge bg-secondary">{{ emp.pin_code }}</span></td>
+                <td>{{ emp.department }}</td>
+                <td>
+                    {% if emp.accessible_labs %}
+                        {% set labs_list = emp.accessible_labs.split(',') if emp.accessible_labs else [] %}
+                        <span class="badge bg-info">{{ labs_list|length }}</span> лабораторий
+                    {% else %}
+                        <span class="badge bg-warning">Нет доступа</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if emp.is_active %}
+                        <span class="badge bg-success">Активен</span>
+                    {% else %}
+                        <span class="badge bg-danger">Неактивен</span>
+                    {% endif %}
+                </td>
+                <td>{{ emp.created_at }}</td>
+                <td>
+                    <button class="btn btn-sm btn-warning btn-edit" data-id="{{ emp.id }}" title="Редактировать">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-info btn-access" data-id="{{ emp.id }}" title="Управление доступом">
+                        <i class="bi bi-door-closed"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btn-delete" data-id="{{ emp.id }}" title="Удалить">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Модальное окно добавления сотрудника -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить сотрудника</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="addEmployeeTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="basic-info-tab" data-bs-toggle="tab" data-bs-target="#basic-info" type="button" role="tab">Основная информация</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#access-info" type="button" role="tab">Доступ к лабораториям</button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content p-3" id="addEmployeeTabContent">
+                    <div class="tab-pane fade show active" id="basic-info" role="tabpanel">
+                        <form id="employeeForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Логин *</label>
+                                        <input type="text" class="form-control" name="login" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Пароль *</label>
+                                        <input type="password" class="form-control" name="password" required minlength="6">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">PIN-код * ({{ min_pin_length }}-{{ max_pin_length }} цифр)</label>
+                                        <input type="text" class="form-control" name="pin_code" pattern="\d+" 
+                                               minlength="{{ min_pin_length }}" maxlength="{{ max_pin_length }}" required>
+                                        <div class="form-text">Используется для входа через терминал</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">ФИО *</label>
+                                        <input type="text" class="form-control" name="full_name" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Отдел</label>
+                                        <input type="text" class="form-control" name="department">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Должность</label>
+                                        <input type="text" class="form-control" name="position">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Тип пользователя</label>
+                                        <select class="form-select" name="user_type">
+                                            <option value="employee">Сотрудник</option>
+                                            <option value="admin">Администратор</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" name="is_active" checked>
+                                        <label class="form-check-label">Активный сотрудник</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="access-info" role="tabpanel">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Вы можете настроить доступ сотрудника к лабораториям после сохранения
+                        </div>
+                        <p>Доступ будет настроен позже через отдельное меню управления доступом.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveEmployeeBtn">Сохранить сотрудника</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования сотрудника -->
+<div class="modal fade" id="editEmployeeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать сотрудника</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="editEmployeeTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="edit-basic-info-tab" data-bs-toggle="tab" data-bs-target="#edit-basic-info" type="button" role="tab">Основная информация</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="edit-access-tab" data-bs-toggle="tab" data-bs-target="#edit-access-info" type="button" role="tab">Доступ к лабораториям</button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content p-3" id="editEmployeeTabContent">
+                    <div class="tab-pane fade show active" id="edit-basic-info" role="tabpanel">
+                        <form id="editEmployeeForm">
+                            <input type="hidden" name="id" id="editEmployeeId">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Логин *</label>
+                                        <input type="text" class="form-control" name="login" id="editLogin" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Пароль (оставьте пустым, чтобы не менять)</label>
+                                        <input type="password" class="form-control" name="password" id="editPassword">
+                                        <div class="form-text">Минимум 6 символов</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">PIN-код * ({{ min_pin_length }}-{{ max_pin_length }} цифр)</label>
+                                        <input type="text" class="form-control" name="pin_code" id="editPinCode" 
+                                               pattern="\d+" minlength="{{ min_pin_length }}" maxlength="{{ max_pin_length }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">ФИО *</label>
+                                        <input type="text" class="form-control" name="full_name" id="editFullName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Отдел</label>
+                                        <input type="text" class="form-control" name="department" id="editDepartment">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Должность</label>
+                                        <input type="text" class="form-control" name="position" id="editPosition">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Тип пользователя</label>
+                                        <select class="form-select" name="user_type" id="editUserType">
+                                            <option value="employee">Сотрудник</option>
+                                            <option value="admin">Администратор</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" name="is_active" id="editIsActive">
+                                        <label class="form-check-label">Активный сотрудник</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="edit-access-info" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6>Управление доступом к лабораториям</h6>
+                            <button type="button" class="btn btn-sm btn-success" id="addAccessRuleBtn">
+                                <i class="bi bi-plus-circle"></i> Добавить правило
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-sm" id="accessRulesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Лаборатория</th>
+                                        <th>День недели</th>
+                                        <th>Время начала</th>
+                                        <th>Время окончания</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accessRulesBody">
+                                    <!-- Правила доступа будут загружаться динамически -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div id="noAccessRules" class="text-center text-muted py-4">
+                            <i class="bi bi-door-closed display-6"></i>
+                            <p class="mt-2">Нет настроенных правил доступа</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="updateEmployeeBtn">Обновить данные</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно управления доступом -->
+<div class="modal fade" id="accessManagementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="accessModalTitle">Управление доступом к лабораториям</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 id="accessEmployeeName"></h6>
+                    <button type="button" class="btn btn-sm btn-success" id="addAccessBtn">
+                        <i class="bi bi-plus-circle"></i> Добавить доступ
+                    </button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Лаборатория</th>
+                                <th>Расписание</th>
+                                <th>Дни недели</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accessListBody">
+                            <!-- Список доступа будет загружаться динамически -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="noAccessMessage" class="text-center text-muted py-4">
+                    <i class="bi bi-door-closed display-6"></i>
+                    <p class="mt-2">Нет настроенного доступа к лабораториям</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно добавления/редактирования правила доступа -->
+<div class="modal fade" id="accessRuleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="accessRuleModalTitle">Добавить правило доступа</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="accessRuleForm">
+                    <input type="hidden" id="accessRuleId">
+                    <input type="hidden" id="accessEmployeeId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Лаборатория *</label>
+                        <select class="form-select" id="accessLaboratoryId" required>
+                            <option value="">Выберите лабораторию</option>
+                            {% for lab in laboratories %}
+                            <option value="{{ lab.id }}">{{ lab.name }} ({{ lab.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Дни недели *</label>
+                        <div class="row">
+                            {% for day in days_of_week %}
+                            <div class="col-4">
+                                <div class="form-check">
+                                    <input class="form-check-input day-checkbox" type="checkbox" value="{{ loop.index0 }}" id="day{{ loop.index0 }}">
+                                    <label class="form-check-label" for="day{{ loop.index0 }}">
+                                        {{ day }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Время начала *</label>
+                                <input type="time" class="form-control" id="accessTimeStart" value="08:00" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Время окончания *</label>
+                                <input type="time" class="form-control" id="accessTimeEnd" value="20:00" required>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveAccessRuleBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Глобальные переменные
+let currentEmployeeId = null;
+let currentAccessRuleId = null;
+const daysOfWeek = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+
+// Инициализация после загрузки страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчики основных кнопок
+    document.getElementById('saveEmployeeBtn').addEventListener('click', saveEmployee);
+    document.getElementById('updateEmployeeBtn').addEventListener('click', updateEmployee);
+    
+    // Обработчики кнопок в таблице
+    document.querySelectorAll('.btn-edit').forEach(button => {
+        button.addEventListener('click', function() {
+            const employeeId = this.getAttribute('data-id');
+            editEmployee(parseInt(employeeId));
+        });
+    });
+    
+    document.querySelectorAll('.btn-access').forEach(button => {
+        button.addEventListener('click', function() {
+            const employeeId = this.getAttribute('data-id');
+            showAccessManagement(parseInt(employeeId));
+        });
+    });
+    
+    document.querySelectorAll('.btn-delete').forEach(button => {
+        button.addEventListener('click', function() {
+            const employeeId = this.getAttribute('data-id');
+            deleteEmployee(parseInt(employeeId));
+        });
+    });
+    
+    // Обработчики для управления доступом
+    document.getElementById('addAccessBtn').addEventListener('click', function() {
+        showAccessRuleModal();
+    });
+    
+    document.getElementById('addAccessRuleBtn').addEventListener('click', function() {
+        showAccessRuleModal();
+    });
+    
+    document.getElementById('saveAccessRuleBtn').addEventListener('click', saveAccessRule);
+    
+    // Автогенерация логина из ФИО
+    const fullNameInput = document.querySelector('input[name="full_name"]');
+    if (fullNameInput) {
+        fullNameInput.addEventListener('input', function(e) {
+            const loginField = document.querySelector('input[name="login"]');
+            if (loginField && !loginField.value && this.value) {
+                // Создаем логин из фамилии в нижнем регистре
+                const lastName = this.value.split(' ')[0].toLowerCase();
+                loginField.value = lastName;
+            }
+        });
+    }
+});
+
+// Функция отображения управления доступом
+async function showAccessManagement(employeeId) {
+    try {
+        currentEmployeeId = employeeId;
+        
+        // Получаем данные сотрудника
+        const response = await fetch(`/api/admin/employees/${employeeId}`);
+        if (!response.ok) throw new Error('Ошибка при получении данных сотрудника');
+        
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message);
+        
+        const employee = result.employee;
+        
+        // Заполняем заголовок
+        document.getElementById('accessModalTitle').textContent = `Управление доступом: ${employee.full_name}`;
+        document.getElementById('accessEmployeeName').textContent = employee.full_name;
+        
+        // Загружаем список доступов
+        await loadAccessRules(employeeId);
+        
+        // Показываем модальное окно
+        const modal = new bootstrap.Modal(document.getElementById('accessManagementModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Ошибка: ' + error.message);
+    }
+}
+
+// Загрузка правил доступа
+async function loadAccessRules(employeeId) {
+    try {
+        const response = await fetch(`/api/admin/employees/${employeeId}/access`);
+        if (!response.ok) throw new Error('Ошибка при получении прав доступа');
+        
+        const result = await response.json();
+        const accessListBody = document.getElementById('accessListBody');
+        const noAccessMessage = document.getElementById('noAccessMessage');
+        
+        if (!result.success || !result.access_rights || result.access_rights.length === 0) {
+            if (accessListBody) accessListBody.innerHTML = '';
+            if (noAccessMessage) noAccessMessage.style.display = 'block';
+            return;
+        }
+        
+        if (noAccessMessage) noAccessMessage.style.display = 'none';
+        
+        // Формируем таблицу
+        let html = '';
+        result.access_rights.forEach(rule => {
+            // Форматируем дни недели
+            const days = rule.days_of_week || '';
+            const dayNames = Array.isArray(days) 
+                ? days.map(dayNum => {
+                    const dayIndex = parseInt(dayNum);
+                    return dayIndex >= 0 && dayIndex < 7 ? daysOfWeek[dayIndex] : '';
+                }).filter(Boolean).join(', ')
+                : '';
+            
+            html += `
+                <tr>
+                    <td>${rule.laboratory_name || 'Неизвестно'}</td>
+                    <td>${rule.time_start || '08:00'} - ${rule.time_end || '20:00'}</td>
+                    <td>${dayNames || 'Все дни'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editAccessRule(${rule.id})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteAccessRule(${rule.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        if (accessListBody) accessListBody.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading access rules:', error);
+        const noAccessMessage = document.getElementById('noAccessMessage');
+        if (noAccessMessage) noAccessMessage.style.display = 'block';
+    }
+}
+
+// Показать модальное окно правила доступа
+function showAccessRuleModal(ruleId = null) {
+    const modalElement = document.getElementById('accessRuleModal');
+    if (!modalElement) return;
+    
+    const modal = new bootstrap.Modal(modalElement);
+    const form = document.getElementById('accessRuleForm');
+    
+    if (ruleId) {
+        // Режим редактирования
+        currentAccessRuleId = ruleId;
+        document.getElementById('accessRuleModalTitle').textContent = 'Редактировать правило доступа';
+        loadAccessRuleData(ruleId);
+    } else {
+        // Режим добавления
+        currentAccessRuleId = null;
+        document.getElementById('accessRuleModalTitle').textContent = 'Добавить правило доступа';
+        if (form) form.reset();
+        const accessEmployeeId = document.getElementById('accessEmployeeId');
+        if (accessEmployeeId) accessEmployeeId.value = currentEmployeeId;
+        
+        // Сбрасываем чекбоксы дней
+        document.querySelectorAll('.day-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    }
+    
+    modal.show();
+}
+
+// Загрузить данные правила доступа для редактирования
+async function loadAccessRuleData(ruleId) {
+    try {
+        const response = await fetch(`/api/admin/access_rule/${ruleId}`);
+        if (!response.ok) throw new Error('Ошибка при получении данных правила');
+        
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message);
+        
+        const rule = result.rule;
+        
+        // Заполняем форму
+        document.getElementById('accessRuleId').value = rule.id;
+        document.getElementById('accessEmployeeId').value = rule.employee_id;
+        document.getElementById('accessLaboratoryId').value = rule.laboratory_id;
+        document.getElementById('accessTimeStart').value = rule.time_start || '08:00';
+        document.getElementById('accessTimeEnd').value = rule.time_end || '20:00';
+        
+        // Устанавливаем дни недели
+        document.querySelectorAll('.day-checkbox').forEach(checkbox => {
+            const dayValue = parseInt(checkbox.value);
+            checkbox.checked = rule.days_of_week && rule.days_of_week.includes(dayValue.toString());
+        });
+        
+    } catch (error) {
+        console.error('Error loading access rule:', error);
+        alert('Ошибка при загрузке данных правила: ' + error.message);
+    }
+}
+
+// Сохранить правило доступа
+async function saveAccessRule() {
+    try {
+        // Собираем данные
+        const ruleId = document.getElementById('accessRuleId').value;
+        const employeeId = document.getElementById('accessEmployeeId').value;
+        const laboratoryId = document.getElementById('accessLaboratoryId').value;
+        const timeStart = document.getElementById('accessTimeStart').value;
+        const timeEnd = document.getElementById('accessTimeEnd').value;
+        
+        // Собираем выбранные дни
+        const selectedDays = [];
+        document.querySelectorAll('.day-checkbox:checked').forEach(checkbox => {
+            selectedDays.push(parseInt(checkbox.value));
+        });
+        
+        // Валидация
+        if (!laboratoryId) {
+            alert('Выберите лабораторию');
+            return;
+        }
+        
+        if (selectedDays.length === 0) {
+            alert('Выберите хотя бы один день недели');
+            return;
+        }
+        
+        if (!timeStart || !timeEnd) {
+            alert('Укажите время начала и окончания');
+            return;
+        }
+        
+        const data = {
+            employee_id: parseInt(employeeId),
+            laboratory_id: parseInt(laboratoryId),
+            days_of_week: selectedDays,
+            time_start: timeStart,
+            time_end: timeEnd
+        };
+        
+        let url, method;
+        if (ruleId) {
+            url = `/api/admin/access_rule/${ruleId}`;
+            method = 'PUT';
+        } else {
+            url = '/api/admin/access_rule';
+            method = 'POST';
+        }
+        
+        // Показываем индикатор загрузки
+        const saveButton = document.getElementById('saveAccessRuleBtn');
+        const originalText = saveButton.innerHTML;
+        saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
+        saveButton.disabled = true;
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        // Восстанавливаем кнопку
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+        
+        if (result.success) {
+            // Закрываем модальное окно
+            const modal = bootstrap.Modal.getInstance(document.getElementById('accessRuleModal'));
+            modal.hide();
+            
+            // Обновляем список правил
+            await loadAccessRules(currentEmployeeId);
+            
+            // Если мы в окне редактирования сотрудника, обновляем и там
+            if (document.getElementById('editEmployeeModal').classList.contains('show')) {
+                await loadAccessRulesForEdit(currentEmployeeId);
+            }
+        } else {
+            alert('Ошибка: ' + result.message);
+        }
+        
+    } catch (error) {
+        console.error('Error saving access rule:', error);
+        const saveButton = document.getElementById('saveAccessRuleBtn');
+        if (saveButton) {
+            saveButton.innerHTML = 'Сохранить';
+            saveButton.disabled = false;
+        }
+        alert('Ошибка сохранения: ' + error.message);
+    }
+}
+
+// Загрузить правила доступа для окна редактирования
+async function loadAccessRulesForEdit(employeeId) {
+    try {
+        const response = await fetch(`/api/admin/employees/${employeeId}/access`);
+        if (!response.ok) return;
+        
+        const result = await response.json();
+        const accessRulesBody = document.getElementById('accessRulesBody');
+        const noAccessRules = document.getElementById('noAccessRules');
+        
+        if (!result.success || !result.access_rights || result.access_rights.length === 0) {
+            if (accessRulesBody) accessRulesBody.innerHTML = '';
+            if (noAccessRules) noAccessRules.style.display = 'block';
+            return;
+        }
+        
+        if (noAccessRules) noAccessRules.style.display = 'none';
+        
+        // Формируем таблицу
+        let html = '';
+        result.access_rights.forEach(rule => {
+            // Форматируем дни недели
+            const days = rule.days_of_week || '';
+            const dayNames = Array.isArray(days)
+                ? days.map(dayNum => {
+                    const dayIndex = parseInt(dayNum);
+                    return dayIndex >= 0 && dayIndex < 7 ? daysOfWeek[dayIndex] : '';
+                }).filter(Boolean).join(', ')
+                : '';
+            
+            html += `
+                <tr>
+                    <td>${rule.laboratory_name || 'Неизвестно'}</td>
+                    <td>${dayNames || 'Все дни'}</td>
+                    <td>${rule.time_start || '08:00'}</td>
+                    <td>${rule.time_end || '20:00'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editAccessRuleFromEdit(${rule.id})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteAccessRuleFromEdit(${rule.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        if (accessRulesBody) accessRulesBody.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading access rules for edit:', error);
+    }
+}
+
+// Редактировать правило доступа из окна управления доступом
+function editAccessRule(ruleId) {
+    showAccessRuleModal(ruleId);
+}
+
+// Редактировать правило доступа из окна редактирования сотрудника
+function editAccessRuleFromEdit(ruleId) {
+    showAccessRuleModal(ruleId);
+}
+
+// Удалить правило доступа из окна управления доступом
+async function deleteAccessRule(ruleId) {
+    if (!confirm('Вы уверены, что хотите удалить это правило доступа?')) return;
+    
+    try {
+        const response = await fetch(`/api/admin/access_rule/${ruleId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            await loadAccessRules(currentEmployeeId);
+        } else {
+            alert('Ошибка: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error deleting access rule:', error);
+        alert('Ошибка удаления: ' + error.message);
+    }
+}
+
+// Удалить правило доступа из окна редактирования сотрудника
+async function deleteAccessRuleFromEdit(ruleId) {
+    if (!confirm('Вы уверены, что хотите удалить это правило доступа?')) return;
+    
+    try {
+        const response = await fetch(`/api/admin/access_rule/${ruleId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            await loadAccessRulesForEdit(currentEmployeeId);
+        } else {
+            alert('Ошибка: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error deleting access rule:', error);
+        alert('Ошибка удаления: ' + error.message);
+    }
+}
+
+// Основные функции управления сотрудниками
+function validateEmployeeData(data) {
+    // Проверка PIN-кода
+    const pinRegex = /^\d+$/;
+    if (!pinRegex.test(data.pin_code)) {
+        return { valid: false, message: 'PIN-код должен содержать только цифры' };
+    }
+    
+    if (data.pin_code.length < {{ min_pin_length }} || data.pin_code.length > {{ max_pin_length }}) {
+        return { 
+            valid: false, 
+            message: `PIN-код должен содержать от {{ min_pin_length }} до {{ max_pin_length }} цифр` 
+        };
+    }
+    
+    // Проверка пароля (только при создании)
+    if (data.password && data.password.length < 6) {
+        return { valid: false, message: 'Пароль должен содержать не менее 6 символов' };
+    }
+    
+    return { valid: true };
+}
+
+async function saveEmployee() {
+    const form = document.getElementById('employeeForm');
+    if (!form) return;
+    
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+    data.is_active = data.is_active === 'on';
+    
+    // Валидация
+    const validation = validateEmployeeData(data);
+    if (!validation.valid) {
+        alert(validation.message);
+        return;
+    }
+    
+    // Показываем индикатор загрузки
+    const saveButton = document.getElementById('saveEmployeeBtn');
+    const originalText = saveButton.innerHTML;
+    saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
+    saveButton.disabled = true;
+    
+    try {
+        const response = await fetch('/api/admin/add_employee', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        // Восстанавливаем кнопку
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+        
+        if (result.success) {
+            // Закрываем модальное окно и обновляем страницу
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addEmployeeModal'));
+            modal.hide();
+            setTimeout(() => location.reload(), 500);
+        } else {
+            alert('Ошибка: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+        alert('Ошибка соединения с сервером');
+    }
+}
+
+async function editEmployee(id) {
+    try {
+        currentEmployeeId = id;
+        
+        // Получаем данные сотрудника
+        const response = await fetch(`/api/admin/employees/${id}`);
+        if (!response.ok) {
+            throw new Error('Ошибка при получении данных');
+        }
+        
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+        
+        const employee = result.employee;
+        
+        // Заполняем форму редактирования
+        document.getElementById('editEmployeeId').value = employee.id;
+        document.getElementById('editLogin').value = employee.login || '';
+        document.getElementById('editPassword').value = '';
+        document.getElementById('editFullName').value = employee.full_name || '';
+        document.getElementById('editPinCode').value = employee.pin_code || '';
+        document.getElementById('editDepartment').value = employee.department || '';
+        document.getElementById('editPosition').value = employee.position || '';
+        document.getElementById('editUserType').value = employee.user_type || 'employee';
+        document.getElementById('editIsActive').checked = employee.is_active === 1 || employee.is_active === true;
+        
+        // Загружаем правила доступа для вкладки
+        await loadAccessRulesForEdit(id);
+        
+        // Показываем модальное окно
+        const editModal = new bootstrap.Modal(document.getElementById('editEmployeeModal'));
+        editModal.show();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Ошибка: ' + error.message);
+    }
+}
+
+async function updateEmployee() {
+    const form = document.getElementById('editEmployeeForm');
+    if (!form) return;
+    
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+    data.is_active = data.is_active === 'on';
+    const employeeId = parseInt(data.id);
+    
+    // Удаляем id из данных для отправки
+    delete data.id;
+    
+    // Если пароль пустой, удаляем его из данных
+    if (!data.password) {
+        delete data.password;
+    }
+    
+    // Валидация
+    const validation = validateEmployeeData(data);
+    if (!validation.valid) {
+        alert(validation.message);
+        return;
+    }
+    
+    // Показываем индикатор загрузки
+    const updateButton = document.getElementById('updateEmployeeBtn');
+    const originalText = updateButton.innerHTML;
+    updateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Обновление...';
+    updateButton.disabled = true;
+    
+    try {
+        const response = await fetch(`/api/admin/employees/${employeeId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        // Восстанавливаем кнопку
+        updateButton.innerHTML = originalText;
+        updateButton.disabled = false;
+        
+        if (result.success) {
+            // Закрываем модальное окно и обновляем страницу
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editEmployeeModal'));
+            modal.hide();
+            setTimeout(() => location.reload(), 500);
+        } else {
+            alert('Ошибка: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        updateButton.innerHTML = originalText;
+        updateButton.disabled = false;
+        alert('Ошибка соединения с сервером');
+    }
+}
+
+function deleteEmployee(id) {
+    if (confirm('Вы уверены, что хотите удалить сотрудника?')) {
+        fetch(`/api/admin/employees/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Ошибка: ' + result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка соединения с сервером');
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,618 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Статистика и графики - АСКУД Админ{% endblock %}
+
+{% block page_title %}Статистика и аналитика{% endblock %}
+{% block page_subtitle %}Визуализация данных о работе системы контроля доступа{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Быстрая статистика -->
+    <div class="col-12 mb-4">
+        <div class="row">
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="h1 mb-2" id="totalEvents">0</div>
+                        <small class="text-muted">Всего событий</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="h1 mb-2" id="successRate">0%</div>
+                        <small class="text-muted">Успешных входов</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="h1 mb-2" id="avgTime">0ч</div>
+                        <small class="text-muted">Среднее время</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="h1 mb-2" id="peakHour">-</div>
+                        <small class="text-muted">Пиковый час</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="col-12 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Период</label>
+                        <select class="form-select" id="periodSelect">
+                            <option value="7">Последние 7 дней</option>
+                            <option value="30" selected>Последние 30 дней</option>
+                            <option value="90">Последние 90 дней</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Тип графика</label>
+                        <select class="form-select" id="chartType">
+                            <option value="line">Линейный</option>
+                            <option value="bar" selected>Столбчатый</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Группировка</label>
+                            <select class="form-select" id="groupBy">
+                            <option value="day">По дням</option>
+                            <option value="week">По неделям</option>
+                            <option value="month">По месяцам</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-primary w-100" onclick="loadStatistics()">
+                            <i class="bi bi-arrow-clockwise"></i> Обновить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основные графики -->
+    <div class="col-lg-8 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-week"></i> Статистика посещаемости
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-pie-chart"></i> Распределение по лабораториям
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="labsPieChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Дополнительные графики -->
+    <div class="col-lg-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Активность по часам
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="hourlyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-shield-exclamation"></i> Отказы в доступе
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="denialsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Таблица детальной статистики -->
+    <div class="col-12 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-table"></i> Детальная статистика
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="detailedStats">
+                        <thead>
+                            <tr>
+                                <th>Показатель</th>
+                                <th>Значение</th>
+                                <th>Изменение</th>
+                                <th>Тренд</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Данные будут загружены через JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экспорт графиков -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-download"></i> Экспорт графиков
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-primary w-100" onclick="exportChart('attendanceChart', 'Статистика_посещаемости')">
+                            <i class="bi bi-image"></i> Сохранить график посещаемости
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-success w-100" onclick="exportChart('labsPieChart', 'Распределение_по_лабораториям')">
+                            <i class="bi bi-image"></i> Сохранить распределение
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-warning w-100" onclick="exportAllCharts()">
+                            <i class="bi bi-images"></i> Сохранить все графики
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Глобальные переменные для графиков
+    let attendanceChart = null;
+    let labsPieChart = null;
+    let hourlyChart = null;
+    let denialsChart = null;
+    
+    // Цвета для графиков
+    const chartColors = {
+        primary: '#3498db',
+        success: '#27ae60',
+        warning: '#f39c12',
+        danger: '#e74c3c',
+        info: '#17a2b8'
+    };
+    
+    // Загрузка статистики
+    async function loadStatistics() {
+        try {
+            const period = document.getElementById('periodSelect').value;
+            const chartType = document.getElementById('chartType').value;
+            const groupBy = document.getElementById('groupBy').value;
+            
+            // Показать индикатор загрузки
+            showLoading(true);
+            
+            // Загрузить данные с сервера
+            const response = await fetch(`/api/admin/statistics/charts?period=${period}&group_by=${groupBy}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                // Обновить быструю статистику
+                updateQuickStats(data.quick_stats);
+                
+                // Обновить все графики
+                updateAttendanceChart(data.attendance_data, chartType);
+                updateLabsPieChart(data.labs_data);
+                updateHourlyChart(data.hourly_data);
+                updateDenialsChart(data.denials_data);
+                updateDetailedStats(data.detailed_stats);
+            } else {
+                showError('Ошибка загрузки данных: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            showError('Ошибка соединения с сервером');
+        } finally {
+            showLoading(false);
+        }
+    }
+    
+    // Обновление быстрой статистики
+    function updateQuickStats(stats) {
+        document.getElementById('totalEvents').textContent = stats.total_events.toLocaleString();
+        document.getElementById('successRate').textContent = stats.success_rate + '%';
+        document.getElementById('avgTime').textContent = stats.avg_time;
+        document.getElementById('peakHour').textContent = stats.peak_hour;
+    }
+    
+    // Обновление графика посещаемости
+    function updateAttendanceChart(data, chartType) {
+        const ctx = document.getElementById('attendanceChart').getContext('2d');
+        
+        // Удалить старый график, если существует
+        if (attendanceChart) {
+            attendanceChart.destroy();
+        }
+        
+        attendanceChart = new Chart(ctx, {
+            type: chartType,
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Входы',
+                        data: data.entries,
+                        borderColor: chartColors.success,
+                        backgroundColor: chartColors.success + '40',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Выходы',
+                        data: data.exits,
+                        borderColor: chartColors.primary,
+                        backgroundColor: chartColors.primary + '40',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Количество'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Обновление круговой диаграммы лабораторий
+    function updateLabsPieChart(data) {
+        const ctx = document.getElementById('labsPieChart').getContext('2d');
+        
+        if (labsPieChart) {
+            labsPieChart.destroy();
+        }
+        
+        // Создаем цвета для каждого сегмента
+        const backgroundColors = [
+            chartColors.primary,
+            chartColors.success,
+            chartColors.warning,
+            chartColors.danger,
+            chartColors.info,
+            '#9b59b6',
+            '#34495e',
+            '#1abc9c'
+        ];
+        
+        labsPieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: backgroundColors.slice(0, data.labels.length),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Обновление графика активности по часам
+    function updateHourlyChart(data) {
+        const ctx = document.getElementById('hourlyChart').getContext('2d');
+        
+        if (hourlyChart) {
+            hourlyChart.destroy();
+        }
+        
+        // Найти максимальное значение для выделения
+        const maxIndex = data.values.indexOf(Math.max(...data.values));
+        
+        hourlyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Событий в час',
+                    data: data.values,
+                    backgroundColor: data.values.map((value, index) => 
+                        index === maxIndex ? chartColors.danger : chartColors.info
+                    ),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Количество событий'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Час дня'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Обновление графика отказов
+    function updateDenialsChart(data) {
+        const ctx = document.getElementById('denialsChart').getContext('2d');
+        
+        if (denialsChart) {
+            denialsChart.destroy();
+        }
+        
+        denialsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Количество отказов',
+                    data: data.values,
+                    backgroundColor: chartColors.warning + '80',
+                    borderColor: chartColors.warning,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Количество отказов'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Обновление детальной статистики
+    function updateDetailedStats(stats) {
+        const tbody = document.querySelector('#detailedStats tbody');
+        
+        const rows = [
+            {
+                label: 'Всего событий доступа',
+                value: stats.total_events,
+                change: stats.events_change,
+                trend: stats.events_trend
+            },
+            {
+                label: 'Успешных входов',
+                value: stats.successful_entries,
+                change: stats.entries_change,
+                trend: 'up'
+            },
+            {
+                label: 'Отказов в доступе',
+                value: stats.denials,
+                change: stats.denials_change,
+                trend: stats.denials_change > 0 ? 'up' : 'down'
+            },
+            {
+                label: 'Сотрудников в системе',
+                value: stats.total_employees,
+                change: 0,
+                trend: 'neutral'
+            },
+            {
+                label: 'Активных лабораторий',
+                value: stats.active_labs,
+                change: 0,
+                trend: 'neutral'
+            },
+            {
+                label: 'Среднее время в лаборатории',
+                value: stats.avg_time_in_lab,
+                change: stats.time_change,
+                trend: stats.time_trend
+            }
+        ];
+        
+        const html = rows.map(row => {
+            let changeBadge = '';
+            let trendIcon = '';
+            
+            if (row.change !== 0) {
+                changeBadge = `<span class="badge ${row.change > 0 ? 'bg-success' : 'bg-danger'}">
+                    ${row.change > 0 ? '+' : ''}${row.change}%
+                </span>`;
+            }
+            
+            if (row.trend === 'up') {
+                trendIcon = '<i class="bi bi-arrow-up-circle text-success"></i>';
+            } else if (row.trend === 'down') {
+                trendIcon = '<i class="bi bi-arrow-down-circle text-danger"></i>';
+            } else if (row.trend === 'neutral') {
+                trendIcon = '<i class="bi bi-dash-circle text-secondary"></i>';
+            }
+            
+            return `
+                <tr>
+                    <td>${row.label}</td>
+                    <td><strong>${row.value}</strong></td>
+                    <td>${changeBadge}</td>
+                    <td>${trendIcon}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        tbody.innerHTML = html;
+    }
+    
+    // Экспорт графика в изображение
+    function exportChart(chartId, filename) {
+        const chartCanvas = document.getElementById(chartId);
+        const link = document.createElement('a');
+        link.download = `${filename}_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = chartCanvas.toDataURL('image/png');
+        link.click();
+    }
+    
+    // Экспорт всех графиков
+    function exportAllCharts() {
+        const charts = ['attendanceChart', 'labsPieChart', 'hourlyChart', 'denialsChart'];
+        const names = ['Статистика_посещаемости', 'Распределение_по_лабораториям', 'Активность_по_часам', 'Отказы_в_доступе'];
+        
+        // Создаем ZIP архив в памяти
+        const zip = new JSZip();
+        
+        charts.forEach((chartId, index) => {
+            const canvas = document.getElementById(chartId);
+            if (canvas) {
+                const dataUrl = canvas.toDataURL('image/png').split(',')[1];
+                zip.file(`${names[index]}.png`, dataUrl, {base64: true});
+            }
+        });
+        
+        // Добавляем текстовый файл с описанием
+        const date = new Date().toISOString().split('T')[0];
+        zip.file("README.txt", `Экспорт графиков АСКУД\nДата: ${date}\nВсего графиков: ${charts.length}`);
+        
+        // Генерируем и скачиваем ZIP
+        zip.generateAsync({type: "blob"}).then(function(content) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `askud_charts_${date}.zip`;
+            link.click();
+        });
+    }
+    
+    // Показать/скрыть индикатор загрузки
+    function showLoading(show) {
+        const button = document.querySelector('button[onclick="loadStatistics()"]');
+        if (button) {
+            if (show) {
+                button.innerHTML = '<i class="bi bi-hourglass-split"></i> Загрузка...';
+                button.disabled = true;
+            } else {
+                button.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновить';
+                button.disabled = false;
+            }
+        }
+    }
+    
+    // Показать ошибку
+    function showError(message) {
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.innerHTML = `
+            <i class="bi bi-exclamation-triangle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.container-fluid').prepend(alert);
+        
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
+    }
+    
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        // Загрузить библиотеку для создания ZIP (jszip)
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        document.head.appendChild(script);
+        
+        // Загрузить статистику при открытии страницы
+        setTimeout(() => {
+            loadStatistics();
+        }, 500);
+        
+        // Автообновление каждые 5 минут
+        setInterval(loadStatistics, 5 * 60 * 1000);
+    });
+</script>
+{% endblock %}

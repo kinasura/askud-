@@ -1,0 +1,115 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Панель управления - АСКУД Админ{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Панель управления</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/terminal" class="btn btn-sm btn-outline-primary" target="_blank">
+            <i class="bi bi-terminal"></i> Открыть терминал
+        </a>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-primary stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Сотрудников</h6>
+                        <h2 class="card-text">{{ stats.employees_count|default('Не определено') }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-people fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-success stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Лабораторий</h6>
+                        <h2 class="card-text">{{ stats.labs_count }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-building fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-info stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Сейчас в лабораториях</h6>
+                        <h2 class="card-text">{{ stats.active_count }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-person-check fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-warning stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Событий сегодня </h6>
+                        <h2 class="card-text">{{ stats.today_events }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-clock-history fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Быстрые действия -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Быстрые действия</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin_employees') }}" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-person-plus"></i> Управление сотрудниками
+                    </a>
+                    <a href="{{ url_for('admin_import_export') }}" class="btn btn-outline-warning btn-lg">
+                        <i class="bi bi-arrow-left-right"></i> Импорт/Экспорт данных
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Информация о системе</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Версия системы:</strong> 2.0</p>
+                <p><strong>База данных:</strong> SQLite</p>
+                <p><strong>Длина PIN-кода:</strong> 4-8 символов</p>
+                <p><strong>Последнее обновление:</strong> {{ now.strftime('%Y-%m-%d %H:%M') if now else 'Н/Д' }}</p>
+                <p>Почему 2.0?<strong> - Потому что первая версия у всех остальных, а тут принципиально новый уровень!</strong></p>
+                <hr>
+                <p class="text-muted"><small>АО "КОНСИСТ-ОС" &copy; 2025</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

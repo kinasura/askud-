@@ -1,0 +1,265 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Импорт/Экспорт данных - АСКУД Админ{% endblock %}
+
+{% block page_title %}Импорт и экспорт данных{% endblock %}
+{% block page_subtitle %}Управление данными системы через CSV файлы{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Экспорт данных -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-download"></i> Экспорт данных
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Экспортируйте все данные системы в ZIP архив с CSV файлами:</p>
+                
+                <div class="mb-4">
+                    <h6><i class="bi bi-file-earmark-zip"></i> Полный экспорт</h6>
+                    <p class="small text-muted">Архив будет содержать:</p>
+                    <ul class="small">
+                        <li><strong>employees.csv</strong> - все сотрудники системы</li>
+                        <li><strong>laboratories.csv</strong> - все лаборатории</li>
+                        <li><strong>access_schedules.csv</strong> - расписание доступа</li>
+                        <li><strong>access_events_last_30_days.csv</strong> - события за последние 30 дней</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <small>Данные экспортируются в формате CSV с UTF-8 кодировкой и разделителями-запятыми.</small>
+                </div>
+                
+                <div class="d-grid">
+                    <a href="/api/admin/export/csv" class="btn btn-primary btn-lg py-3">
+                        <i class="bi bi-file-earmark-zip"></i> Экспортировать все данные
+                    </a>
+                </div>
+            </div>
+            <div class="card-footer bg-white">
+                <small class="text-muted">Размер архива зависит от количества данных в системе</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Импорт данных -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-upload"></i> Импорт данных
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Импортируйте данные из CSV файлов. Поддерживаются отдельные файлы или ZIP архив.</p>
+                
+                <!-- Импорт CSV -->
+                <div class="mb-4">
+                    <h6><i class="bi bi-filetype-csv"></i> Импорт CSV файла</h6>
+                    <form id="csvImportForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label">Выберите CSV файл</label>
+                            <input type="file" class="form-control" id="csvFile" accept=".csv" required>
+                            <div class="form-text">
+                                Поддерживаемые файлы: employees.csv, laboratories.csv, access_schedules.csv
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success" id="importCsvBtn">
+                                <i class="bi bi-upload"></i> Импортировать CSV
+                                <span class="spinner-border spinner-border-sm d-none" id="csvSpinner"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <hr>
+                
+                <!-- Импорт ZIP -->
+                <div>
+                    <h6><i class="bi bi-file-earmark-zip"></i> Импорт ZIP архива</h6>
+                    <p class="small text-muted mb-3">ZIP архив должен содержать CSV файлы в корневой папке.</p>
+                    
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <small>
+                            При импорте ZIP архива существующие данные <strong>не удаляются</strong>. 
+                            Новые записи добавляются, дубликаты пропускаются.
+                        </small>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button class="btn btn-warning" id="importZipBtn" disabled>
+                            <i class="bi bi-upload"></i> Импортировать ZIP (в разработке)
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-white">
+                <small class="text-muted">Поддерживается кодировка UTF-8 с BOM для русских символов</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Инструкция по формату -->
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="bi bi-file-text"></i> Формат CSV файлов
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <h6>employees.csv</h6>
+                <pre class="bg-light p-3 small rounded"><code>id,login,password,pin_code,full_name,department,position,phone,email,is_active,user_type
+1,admin,admin123,0000,Администратор Системы,ИТ-отдел,Системный администратор,,,1,admin
+2,ivanov,ivanov123,1234,Иванов Иван Иванович,Химическая лаборатория,Инженер-химик,,,1,employee</code></pre>
+            </div>
+            <div class="col-md-4">
+                <h6>laboratories.csv</h6>
+                <pre class="bg-light p-3 small rounded"><code>id,name,code,location,description,capacity,is_active
+1,Химическая лаборатория,CHEM-001,Корпус А, этаж 3,Лаборатория химического анализа,15,1
+2,Биологическая лаборатория,BIO-002,Корпус Б, этаж 2,Лаборатория биологических исследований,10,1</code></pre>
+            </div>
+            <div class="col-md-4">
+                <h6>access_schedules.csv</h6>
+                <pre class="bg-light p-3 small rounded"><code>id,employee_id,laboratory_id,day_of_week,time_start,time_end
+1,2,1,0,08:00,20:00
+2,2,1,1,08:00,20:00
+3,3,2,0,09:00,18:00</code></pre>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-lightbulb"></i>
+            <small>
+                <strong>Совет:</strong> Для создания CSV файлов можно использовать Microsoft Excel, 
+                Google Sheets или LibreOffice Calc. Сохраняйте файлы в формате "CSV UTF-8 (с разделителями-запятыми)".
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Результаты импорта -->
+<div class="modal fade" id="importResultModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-check-circle"></i> Результат импорта
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="importResultContent">
+                    <!-- Результат будет загружен сюда -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-primary" onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise"></i> Обновить страницу
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Обработка импорта CSV
+    document.getElementById('csvImportForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('csvFile');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            alert('Выберите файл для импорта');
+            return;
+        }
+        
+        if (!file.name.endsWith('.csv')) {
+            alert('Выберите CSV файл');
+            return;
+        }
+        
+        // Показать спиннер
+        const importBtn = document.getElementById('importCsvBtn');
+        const spinner = document.getElementById('csvSpinner');
+        importBtn.disabled = true;
+        spinner.classList.remove('d-none');
+        
+        // Создать FormData
+        const formData = new FormData();
+        formData.append('csv_file', file);
+        
+        // Отправить запрос
+        fetch('/api/admin/import/csv', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Скрыть спиннер
+            importBtn.disabled = false;
+            spinner.classList.add('d-none');
+            
+            // Очистить поле файла
+            fileInput.value = '';
+            
+            // Показать результат
+            showImportResult(data);
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            
+            // Скрыть спиннер
+            importBtn.disabled = false;
+            spinner.classList.add('d-none');
+            
+            showImportResult({
+                success: false,
+                message: 'Ошибка соединения с сервером: ' + error.message
+            });
+        });
+    });
+    
+    // Показать результат импорта
+    function showImportResult(data) {
+        const resultContent = document.getElementById('importResultContent');
+        
+        if (data.success) {
+            resultContent.innerHTML = `
+                <div class="alert alert-success">
+                    <h5><i class="bi bi-check-circle"></i> Импорт успешно завершен</h5>
+                    <p>${data.message}</p>
+                </div>
+            `;
+        } else {
+            resultContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5><i class="bi bi-exclamation-triangle"></i> Ошибка импорта</h5>
+                    <p>${data.message}</p>
+                </div>
+            `;
+        }
+        
+        // Показать модальное окно
+        const modal = new bootstrap.Modal(document.getElementById('importResultModal'));
+        modal.show();
+    }
+    
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Страница импорта/экспорта загружена');
+    });
+</script>
+{% endblock %}
