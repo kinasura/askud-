@@ -12,17 +12,58 @@
             --header-height: 56px;
             --primary-color: #2c3e50;
             --secondary-color: #3498db;
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --card-bg: #ffffff;
+            --sidebar-bg: #ffffff;
+            --border-color: #dee2e6;
+            --hover-bg: #f0f7ff;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --status-bg: #f8f9fa;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
         }
         
+        [data-theme="dark"] {
+            --primary-color: #1a1a2e;
+            --secondary-color: #6c63ff;
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --sidebar-bg: #1a1a1a;
+            --border-color: #333333;
+            --hover-bg: #2a2a3e;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --status-bg: #2d2d2d;
+            --success-color: #218838;
+            --warning-color: #e0a800;
+            --danger-color: #c82333;
+            --info-color: #138496;
+        }
+        
+        /* Предотвращение белой вспышки */
         body {
-            background-color: #f8f9fa;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+            opacity: 0;
+            animation: fadeIn 0.3s ease-in forwards;
+        }
+        
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
         }
         
         .navbar-admin {
             background: var(--primary-color);
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             height: var(--header-height);
+            transition: background-color 0.3s;
         }
         
         .sidebar {
@@ -31,10 +72,11 @@
             left: 0;
             bottom: 0;
             width: var(--sidebar-width);
-            background: white;
+            background: var(--sidebar-bg);
             box-shadow: 2px 0 10px rgba(0,0,0,0.05);
             z-index: 100;
             overflow-y: auto;
+            transition: background-color 0.3s, box-shadow 0.3s;
         }
         
         .sidebar-sticky {
@@ -42,7 +84,7 @@
         }
         
         .sidebar .nav-link {
-            color: #555;
+            color: var(--text-color);
             padding: 12px 20px;
             margin: 2px 10px;
             border-radius: 8px;
@@ -52,7 +94,7 @@
         }
         
         .sidebar .nav-link:hover {
-            background: #f0f7ff;
+            background: var(--hover-bg);
             color: var(--secondary-color);
             transform: translateX(5px);
         }
@@ -60,7 +102,7 @@
         .sidebar .nav-link.active {
             background: var(--secondary-color);
             color: white;
-            box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
+            box-shadow: 0 3px 10px rgba(108, 99, 255, 0.3);
         }
         
         .sidebar .nav-link i {
@@ -73,18 +115,23 @@
             margin-left: var(--sidebar-width);
             padding: 20px;
             min-height: calc(100vh - var(--header-height));
+            background-color: var(--bg-color);
+            transition: margin-left 0.3s, background-color 0.3s;
         }
         
         .stat-card {
             border-radius: 10px;
             border: none;
-            box-shadow: 0 3px 15px rgba(0,0,0,0.08);
-            transition: transform 0.3s;
+            box-shadow: 0 3px 15px var(--shadow-color);
+            transition: transform 0.3s, box-shadow 0.3s;
             overflow: hidden;
+            background-color: var(--card-bg);
+            color: var(--text-color);
         }
         
         .stat-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 5px 20px var(--shadow-color);
         }
         
         .stat-card .card-body {
@@ -96,13 +143,34 @@
             opacity: 0.8;
         }
         
-        .table-hover tbody tr:hover {
-            background-color: #f8f9fa;
+        /* Исправление для таблиц в темной теме */
+        [data-theme="dark"] .table {
+            color: var(--text-color);
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+        }
+        
+        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > * {
+            background-color: var(--card-bg) !important;
+        }
+        
+        [data-theme="dark"] .table-hover tbody tr:hover {
+            background-color: var(--hover-bg);
             cursor: pointer;
         }
         
+        [data-theme="dark"] .table thead th {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+            border-bottom-color: var(--border-color) !important;
+        }
+        
         .badge-online {
-            background-color: #28a745;
+            background-color: var(--success-color);
             animation: pulse 2s infinite;
         }
         
@@ -123,9 +191,129 @@
         }
         
         .page-header {
-            border-bottom: 2px solid #e9ecef;
+            border-bottom: 2px solid var(--border-color);
             padding-bottom: 1rem;
             margin-bottom: 2rem;
+            color: var(--text-color);
+        }
+        
+        .dropdown-menu {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+        }
+        
+        .dropdown-item {
+            color: var(--text-color);
+        }
+        
+        .dropdown-item:hover {
+            background-color: var(--hover-bg);
+            color: var(--secondary-color);
+        }
+        
+        /* Исправление для алертов в темной теме */
+        .alert {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        
+        [data-theme="dark"] .alert-success {
+            background-color: rgba(40, 167, 69, 0.2);
+            border-color: var(--success-color);
+            color: #d4edda;
+        }
+        
+        [data-theme="dark"] .alert-warning {
+            background-color: rgba(255, 193, 7, 0.2);
+            border-color: var(--warning-color);
+            color: #fff3cd;
+        }
+        
+        [data-theme="dark"] .alert-danger {
+            background-color: rgba(220, 53, 69, 0.2);
+            border-color: var(--danger-color);
+            color: #f8d7da;
+        }
+        
+        [data-theme="dark"] .alert-info {
+            background-color: rgba(23, 162, 184, 0.2);
+            border-color: var(--info-color);
+            color: #d1ecf1;
+        }
+        
+        [data-theme="dark"] .alert-primary {
+            background-color: rgba(13, 110, 253, 0.2);
+            border-color: #0d6efd;
+            color: #cfe2ff;
+        }
+        
+        .form-control, .form-select {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background-color: var(--card-bg);
+            border-color: var(--secondary-color);
+            color: var(--text-color);
+            box-shadow: 0 0 0 0.25rem rgba(108, 99, 255, 0.25);
+        }
+        
+        .form-control::placeholder {
+            color: #6c757d;
+        }
+        
+        .text-muted {
+            color: #6c757d !important;
+        }
+        
+        [data-theme="dark"] .text-muted {
+            color: #a0a0a0 !important;
+        }
+        
+        .theme-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: var(--hover-bg);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-right: 15px;
+        }
+        
+        .theme-switch::before {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--secondary-color);
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+        
+        [data-theme="dark"] .theme-switch::before {
+            transform: translateX(30px);
+        }
+        
+        .theme-switch i {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            color: var(--text-color);
+        }
+        
+        .theme-switch i.bi-sun {
+            left: 8px;
+        }
+        
+        .theme-switch i.bi-moon {
+            right: 8px;
         }
         
         @media (max-width: 768px) {
@@ -145,8 +333,359 @@
             .main-content {
                 margin-left: 60px;
             }
+            
+            .theme-switch {
+                width: 50px;
+                height: 25px;
+                margin-right: 10px;
+            }
+            
+            .theme-switch::before {
+                width: 21px;
+                height: 21px;
+            }
+            
+            [data-theme="dark"] .theme-switch::before {
+                transform: translateX(25px);
+            }
+        }
+        
+        .nav-link.text-white {
+            color: #fff !important;
+        }
+        
+        [data-theme="dark"] .navbar-brand,
+        [data-theme="dark"] .nav-link.text-white {
+            color: #fff !important;
+        }
+        
+        /* Критические исправления для контрастности */
+        [data-theme="dark"] .bg-white,
+        [data-theme="dark"] .bg-light {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+        }
+        
+        [data-theme="dark"] .card {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+            border-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .card-header {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+            border-bottom-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .card-footer {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+            border-top-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .text-dark {
+            color: var(--text-color) !important;
+        }
+        
+        [data-theme="dark"] .text-body {
+            color: var(--text-color) !important;
+        }
+        
+        [data-theme="dark"] .border {
+            border-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .border-bottom {
+            border-bottom-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .border-top {
+            border-top-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .border-start {
+            border-left-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .border-end {
+            border-right-color: var(--border-color) !important;
+        }
+        
+        /* Цвета Bootstrap в темной теме */
+        [data-theme="dark"] .bg-primary {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+        
+        [data-theme="dark"] .bg-success {
+            background-color: var(--success-color) !important;
+            color: white !important;
+        }
+        
+        [data-theme="dark"] .bg-warning {
+            background-color: var(--warning-color) !important;
+            color: #212529 !important;
+        }
+        
+        [data-theme="dark"] .bg-danger {
+            background-color: var(--danger-color) !important;
+            color: white !important;
+        }
+        
+        [data-theme="dark"] .bg-info {
+            background-color: var(--info-color) !important;
+            color: white !important;
+        }
+        
+        [data-theme="dark"] .bg-secondary {
+            background-color: #6c757d !important;
+            color: white !important;
+        }
+        
+        /* Кнопки в темной теме */
+        [data-theme="dark"] .btn-primary {
+            background-color: var(--secondary-color) !important;
+            border-color: var(--secondary-color) !important;
+            color: white !important;
+        }
+        
+        [data-theme="dark"] .btn-primary:hover {
+            background-color: var(--secondary-color) !important;
+            border-color: var(--secondary-color) !important;
+            opacity: 0.9;
+        }
+        
+        [data-theme="dark"] .btn-success {
+            background-color: var(--success-color) !important;
+            border-color: var(--success-color) !important;
+            color: white !important;
+        }
+        
+        [data-theme="dark"] .btn-danger {
+            background-color: var(--danger-color) !important;
+            border-color: var(--danger-color) !important;
+            color: white !important;
+        }
+        
+        [data-theme="dark"] .btn-outline-primary {
+            color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        [data-theme="dark"] .btn-outline-primary:hover {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        [data-theme="dark"] .btn-outline-secondary {
+            color: #6c757d;
+            border-color: #6c757d;
+        }
+        
+        [data-theme="dark"] .btn-outline-secondary:hover {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        [data-theme="dark"] .btn-outline-success {
+            color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        [data-theme="dark"] .btn-outline-success:hover {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        [data-theme="dark"] .btn-outline-danger {
+            color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        [data-theme="dark"] .btn-outline-danger:hover {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        [data-theme="dark"] .btn-outline-warning {
+            color: var(--warning-color);
+            border-color: var(--warning-color);
+        }
+        
+        [data-theme="dark"] .btn-outline-warning:hover {
+            background-color: var(--warning-color);
+            color: #212529;
+        }
+        
+        [data-theme="dark"] .btn-outline-info {
+            color: var(--info-color);
+            border-color: var(--info-color);
+        }
+        
+        [data-theme="dark"] .btn-outline-info:hover {
+            background-color: var(--info-color);
+            color: white;
+        }
+        
+        /* Списки в темной теме */
+        [data-theme="dark"] .list-group-item {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        
+        [data-theme="dark"] .list-group-item-action:hover {
+            background-color: var(--hover-bg);
+            color: var(--text-color);
+        }
+        
+        /* Модальные окна в темной теме */
+        [data-theme="dark"] .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .modal-footer {
+            border-top-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        
+        /* Бейджи в темной теме */
+        [data-theme="dark"] .badge {
+            color: white !important;
+        }
+        
+        [data-theme="dark"] .badge.bg-secondary {
+            background-color: #6c757d !important;
+        }
+        
+        [data-theme="dark"] .badge.bg-light {
+            background-color: #495057 !important;
+            color: #f8f9fa !important;
+        }
+        
+        /* Навигационные вкладки в темной теме */
+        [data-theme="dark"] .nav-tabs .nav-link {
+            color: var(--text-color);
+            background-color: transparent;
+            border-color: transparent;
+        }
+        
+        [data-theme="dark"] .nav-tabs .nav-link:hover {
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .nav-tabs .nav-link.active {
+            background-color: var(--card-bg);
+            border-color: var(--border-color) var(--border-color) var(--card-bg);
+            color: var(--secondary-color);
+        }
+        
+        [data-theme="dark"] .nav-tabs {
+            border-bottom-color: var(--border-color);
+        }
+        
+        /* Заголовки в темной теме */
+        [data-theme="dark"] h1,
+        [data-theme="dark"] h2,
+        [data-theme="dark"] h3,
+        [data-theme="dark"] h4,
+        [data-theme="dark"] h5,
+        [data-theme="dark"] h6 {
+            color: var(--text-color);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Ссылки в темной теме */
+        [data-theme="dark"] a {
+            color: var(--secondary-color);
+        }
+        
+        [data-theme="dark"] a:hover {
+            color: var(--secondary-color);
+            opacity: 0.8;
+        }
+        
+        /* Формы в темной теме */
+        [data-theme="dark"] .form-check-label {
+            color: var(--text-color);
+        }
+        
+        /* Хлебные крошки в темной теме */
+        [data-theme="dark"] .breadcrumb {
+            background-color: transparent;
+        }
+        
+        [data-theme="dark"] .breadcrumb-item.active {
+            color: var(--text-color);
+        }
+        
+        /* Разделители в темной теме */
+        [data-theme="dark"] hr {
+            border-color: var(--border-color);
+            opacity: 0.5;
+        }
+        
+        [data-theme="dark"] .dropdown-divider {
+            border-color: var(--border-color);
+            opacity: 0.5;
+        }
+        
+        /* Фиксированные цвета для иконок в заголовках */
+        .card-header h5,
+        .card-header h6,
+        .modal-title,
+        .page-title,
+        .section-title {
+            color: var(--text-color) !important;
+        }
+        
+        /* Специфичные исправления для статических карточек */
+        [data-theme="dark"] .stat-card.text-white {
+            color: white !important;
+        }
+        
+        [data-theme="dark"] .stat-card.text-white .card-body {
+            color: white !important;
+        }
+        
+        /* Исправление для футера карточек с информацией */
+        [data-theme="dark"] .card-footer small.text-muted {
+            color: #a0a0a0 !important;
         }
     </style>
+    
+    <!-- Скрипт для предотвращения белой вспышки при загрузке -->
+    <script>
+        // Устанавливаем тему сразу при загрузке страницы
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+            
+            // Устанавливаем атрибуты темы
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            document.body.setAttribute('data-theme', theme);
+            
+            // Устанавливаем переменные CSS для темы
+            const root = document.documentElement;
+            if (theme === 'dark') {
+                root.style.setProperty('--bg-color', '#121212');
+                root.style.setProperty('--text-color', '#e0e0e0');
+                root.style.setProperty('--card-bg', '#1e1e1e');
+                root.style.setProperty('--border-color', '#333333');
+            }
+        })();
+    </script>
 </head>
 <body>
     <!-- Навигационная панель -->
@@ -163,7 +702,15 @@
                 <span class="badge bg-light text-dark ms-2">v2.0</span>
             </div>
             
-            <div class="navbar-nav">
+            <div class="navbar-nav align-items-center">
+                <!-- Переключатель темы -->
+                <div class="nav-item me-3">
+                    <div class="theme-switch" id="themeToggle">
+                        <i class="bi bi-sun"></i>
+                        <i class="bi bi-moon"></i>
+                    </div>
+                </div>
+                
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle text-white" href="#" role="button" 
                        data-bs-toggle="dropdown" aria-expanded="false">
@@ -254,7 +801,7 @@
             
             <!-- Статус системы -->
             <div class="px-3 mt-4">
-                <div class="card border-0 bg-light">
+                <div class="card border-0" style="background-color: var(--status-bg);">
                     <div class="card-body p-3">
                         <div class="d-flex align-items-center">
                             <div class="me-3">
@@ -319,8 +866,45 @@
                     bsAlert.close();
                 });
             }, 5000);
+            
+            // Загрузка сохраненной темы (дополнительная проверка)
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+            
+            // Применение темы Bootstrap
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-bs-theme', 'light');
+            }
         });
+        
+        // Переключение темы
+        document.getElementById('themeToggle').addEventListener('click', function() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            // Применение темы
+            document.body.setAttribute('data-theme', newTheme);
+            document.documentElement.setAttribute('data-bs-theme', newTheme);
+            
+            // Сохранение в localStorage
+            localStorage.setItem('theme', newTheme);
+            
+            // Обновление иконок в таблицах, если они есть
+            updateTableIcons(newTheme);
+        });
+        
+        // Функция для обновления иконок в таблицах при смене темы
+        function updateTableIcons(theme) {
+            // Эта функция может быть переопределена на конкретных страницах
+            // если нужно обновить специфичные элементы
+            if (typeof window.updateThemeSpecificElements === 'function') {
+                window.updateThemeSpecificElements(theme);
+            }
+        }
     </script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>

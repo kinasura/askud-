@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,22 +13,47 @@
             --success-color: #27ae60;
             --warning-color: #f39c12;
             --danger-color: #e74c3c;
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+            --hover-bg: #f0f7ff;
+        }
+        
+        [data-bs-theme="dark"] {
+            --primary-color: #1a1a2e;
+            --secondary-color: #6c63ff;
+            --success-color: #218838;
+            --warning-color: #e0a800;
+            --danger-color: #c82333;
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --border-color: #333333;
+            --hover-bg: #2a2a3e;
         }
         
         body {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #1a2530 100%);
+            background-color: var(--bg-color);
+            color: var(--text-color);
             min-height: 100vh;
             display: flex;
             align-items: center;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
         }
         
         .terminal-container {
-            background: rgba(255, 255, 255, 0.95);
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
             overflow: hidden;
-            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        
+        [data-bs-theme="dark"] .terminal-container {
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
         }
         
         .terminal-header {
@@ -40,7 +65,7 @@
         
         .auth-method-tabs {
             display: flex;
-            border-bottom: 2px solid #dee2e6;
+            border-bottom: 2px solid var(--border-color);
             margin-bottom: 20px;
         }
         
@@ -53,11 +78,13 @@
             background: none;
             font-weight: 500;
             transition: all 0.3s;
+            color: var(--text-color);
+            border-bottom: 3px solid transparent;
         }
         
         .auth-tab.active {
             color: var(--secondary-color);
-            border-bottom: 3px solid var(--secondary-color);
+            border-bottom-color: var(--secondary-color);
         }
         
         .input-group-lg {
@@ -70,33 +97,34 @@
             font-weight: bold;
             text-align: center;
             padding: 20px;
-            border: 3px solid #e9ecef;
+            border: 3px solid var(--border-color);
             border-radius: 10px;
-            background: #f8f9fa;
+            background: var(--hover-bg);
             margin: 10px 0;
             min-height: 80px;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s;
+            color: var(--text-color);
         }
         
         .pin-display.valid {
             border-color: var(--success-color);
-            background: #f0fff4;
+            background: rgba(40, 167, 69, 0.1);
         }
         
         .pin-display.invalid {
             border-color: var(--danger-color);
-            background: #fff5f5;
+            background: rgba(220, 53, 69, 0.1);
         }
         
         .virtual-keyboard {
-            background: #f8f9fa;
+            background: var(--hover-bg);
             border-radius: 10px;
             padding: 15px;
             margin-top: 20px;
-            border: 2px solid #e9ecef;
+            border: 2px solid var(--border-color);
         }
         
         .keypad-btn {
@@ -104,14 +132,17 @@
             font-size: 1.3rem;
             font-weight: bold;
             margin: 5px;
-            border: 2px solid #dee2e6;
+            border: 2px solid var(--border-color);
             border-radius: 8px;
             transition: all 0.2s;
+            background-color: var(--card-bg);
+            color: var(--text-color);
         }
         
         .keypad-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            border-color: var(--secondary-color);
         }
         
         .keypad-btn:active {
@@ -132,18 +163,20 @@
         }
         
         .current-presence {
-            background: #e8f4fd;
+            background: var(--hover-bg);
             border-radius: 10px;
             padding: 15px;
             margin-top: 20px;
             max-height: 200px;
             overflow-y: auto;
+            border: 1px solid var(--border-color);
         }
         
         .current-presence-item {
             padding: 8px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--border-color);
             font-size: 0.9rem;
+            color: var(--text-color);
         }
         
         .current-presence-item:last-child {
@@ -153,31 +186,33 @@
         .time-display {
             font-family: 'Courier New', monospace;
             font-size: 1.2rem;
-            color: var(--primary-color);
+            color: var(--secondary-color);
         }
         
         .laboratory-card {
-            border: 2px solid #dee2e6;
+            border: 2px solid var(--border-color);
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 10px;
             cursor: pointer;
             transition: all 0.3s;
+            background-color: var(--card-bg);
+            color: var(--text-color);
         }
         
         .laboratory-card:hover {
             border-color: var(--secondary-color);
-            background: #f0f7ff;
+            background: var(--hover-bg);
         }
         
         .laboratory-card.selected {
             border-color: var(--success-color);
-            background: #f0fff4;
+            background: rgba(40, 167, 69, 0.1);
         }
         
         .capacity-indicator {
             height: 5px;
-            background: #e9ecef;
+            background: var(--border-color);
             border-radius: 3px;
             margin-top: 5px;
             overflow: hidden;
@@ -187,6 +222,130 @@
             height: 100%;
             background: var(--success-color);
             border-radius: 3px;
+        }
+        
+        .form-control {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        
+        .form-control:focus {
+            background-color: var(--card-bg);
+            border-color: var(--secondary-color);
+            color: var(--text-color);
+            box-shadow: 0 0 0 0.25rem rgba(108, 99, 255, 0.25);
+        }
+        
+        .btn-primary {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            color: white !important;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            opacity: 0.9;
+        }
+        
+        .btn-light {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        
+        .btn-light:hover {
+            background-color: var(--hover-bg);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+            border-color: var(--warning-color);
+            color: #212529;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+            color: white !important;
+        }
+        
+        .badge {
+            color: white !important;
+        }
+        
+        .text-muted {
+            color: #6c757d !important;
+        }
+        
+        [data-bs-theme="dark"] .text-muted {
+            color: #a0a0a0 !important;
+        }
+        
+        .theme-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: var(--hover-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .theme-switch::before {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--secondary-color);
+            top: 1px;
+            left: 1px;
+            transition: transform 0.3s;
+        }
+        
+        [data-bs-theme="dark"] .theme-switch::before {
+            transform: translateX(30px);
+        }
+        
+        .theme-switch i {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            color: var(--text-color);
+        }
+        
+        .theme-switch i.bi-sun {
+            left: 8px;
+        }
+        
+        .theme-switch i.bi-moon {
+            right: 8px;
+        }
+        
+        .theme-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .card-footer {
+            background-color: var(--hover-bg);
+            border-top: 1px solid var(--border-color);
+            color: var(--text-color);
         }
         
         @media (max-width: 768px) {
@@ -205,10 +364,25 @@
                 letter-spacing: 6px;
                 padding: 15px;
             }
+            
+            .theme-container {
+                top: 10px;
+                right: 10px;
+                padding: 8px 12px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Theme switcher -->
+    <div class="theme-container">
+        <div class="theme-switch" id="themeToggle">
+            <i class="bi bi-sun"></i>
+            <i class="bi bi-moon"></i>
+        </div>
+        <small class="text-muted">Тема</small>
+    </div>
+
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-6">
@@ -345,7 +519,7 @@
                         </div>
 
                         <!-- Кнопка подтверждения -->
-                        <button class="btn btn-primary btn-lg w-100 mt-3 py-3" id="submitBtn">
+                        <button class="btn btn-primary btn-lg w-100 mt-3 py-3 fw-bold" id="submitBtn">
                             <i class="bi bi-door-open"></i> ВХОД / ВЫХОД
                         </button>
 
@@ -367,7 +541,7 @@
                     </div>
 
                     <!-- Футер -->
-                    <div class="card-footer bg-light text-center py-2">
+                    <div class="card-footer text-center py-2">
                         <small class="text-muted">
                             АО "КОНСИСТ-ОС" &copy; 2025 | Версия 2.0
                         </small>
@@ -378,7 +552,38 @@
     </div>
 
     <script>
-        // Глобальные переменные
+        // Theme management
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+        
+        // Функция для установки темы
+        function setTheme(theme) {
+            htmlElement.setAttribute('data-bs-theme', theme);
+            localStorage.setItem('theme', theme);
+        }
+        
+        // Функция для переключения темы
+        function toggleTheme() {
+            const currentTheme = htmlElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+        
+        // Инициализация темы при загрузке
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            if (savedTheme) {
+                setTheme(savedTheme);
+            } else if (systemPrefersDark) {
+                setTheme('dark');
+            } else {
+                setTheme('light');
+            }
+        }
+        
+        // Глобальные переменные для терминала
         let currentPin = '';
         let selectedLabId = null;
         let currentAuthMethod = 'pin';
@@ -457,25 +662,89 @@
                     
                     container.innerHTML = '';
                     data.people.forEach(person => {
-                        const entryTime = new Date(person.entry_time);
-                        const duration = Math.floor((new Date() - entryTime) / 60000); // в минутах
-                        
-                        const item = document.createElement('div');
-                        item.className = 'current-presence-item';
-                        item.innerHTML = `
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>${person.full_name}</strong>
-                                    <br>
-                                    <small class="text-muted">Вошел: ${entryTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}</small>
+                        try {
+                            // Исправленный расчет времени
+                            const entryTime = new Date(person.entry_time);
+                            const now = new Date();
+                            
+                            // Проверка валидности даты
+                            if (isNaN(entryTime.getTime())) {
+                                throw new Error('Некорректное время входа');
+                            }
+                            
+                            let duration = 0;
+                            
+                            // Если время входа в будущем (ошибка данных), показываем 0
+                            if (entryTime > now) {
+                                duration = 0;
+                            } else {
+                                // Корректный расчет разницы в минутах
+                                duration = Math.floor((now - entryTime) / (1000 * 60));
+                                
+                                // Если время больше 3 часов (180 минут), вероятно ошибка данных
+                                if (duration > 180) {
+                                    // Проверяем, не вчерашняя ли это запись
+                                    const yesterday = new Date(now);
+                                    yesterday.setDate(yesterday.getDate() - 1);
+                                    
+                                    if (entryTime < yesterday) {
+                                        // Если запись старше суток, показываем ">3ч"
+                                        duration = '>3ч';
+                                    } else {
+                                        // Иначе показываем "~3ч" (примерно 3 часа)
+                                        duration = '~3ч';
+                                    }
+                                } else if (duration < 60) {
+                                    // Меньше часа - показываем минуты
+                                    duration = `${duration} мин.`;
+                                } else {
+                                    // Больше часа - показываем часы и минуты
+                                    const hours = Math.floor(duration / 60);
+                                    const minutes = duration % 60;
+                                    duration = `${hours} ч. ${minutes} мин.`;
+                                }
+                            }
+                            
+                            const item = document.createElement('div');
+                            item.className = 'current-presence-item';
+                            item.innerHTML = `
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>${person.full_name}</strong>
+                                        <br>
+                                        <small class="text-muted">Вошел: ${entryTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <small>${duration}</small>
+                                    </div>
                                 </div>
-                                <div class="text-end">
-                                    <small>${duration} мин.</small>
+                            `;
+                            container.appendChild(item);
+                        } catch (error) {
+                            console.error('Ошибка обработки данных сотрудника:', error);
+                            // Если ошибка, показываем информацию без времени
+                            const item = document.createElement('div');
+                            item.className = 'current-presence-item';
+                            item.innerHTML = `
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>${person.full_name}</strong>
+                                        <br>
+                                        <small class="text-muted">Ошибка времени входа</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <small>?</small>
+                                    </div>
                                 </div>
-                            </div>
-                        `;
-                        container.appendChild(item);
+                            `;
+                            container.appendChild(item);
+                        }
                     });
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки присутствия:', error);
+                    const container = document.getElementById('currentPresenceList');
+                    container.innerHTML = '<div class="text-muted text-center">Ошибка загрузки данных</div>';
                 });
         }
         
@@ -678,7 +947,19 @@
         
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
+            // Инициализация темы - ДО всех других действий
+            initTheme();
+            
             console.log('Терминал АСКУД версии 2.0 инициализирован');
+            
+            // Обработчик переключения темы
+            themeToggle.addEventListener('click', toggleTheme);
+            
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                if (!localStorage.getItem('theme')) {
+                    setTheme(e.matches ? 'dark' : 'light');
+                }
+            });
             
             // Обновление времени каждую секунду
             updateDateTime();
@@ -729,15 +1010,6 @@
                 document.getElementById('loginInput').focus();
             }
         });
-        
-        // API эндпоинты (заглушки)
-        fetch('/api/laboratories')
-            .then(response => response.json())
-            .then(data => console.log('API лабораторий:', data));
-        
-        fetch('/api/laboratory_presence?lab_id=1')
-            .then(response => response.json())
-            .then(data => console.log('API присутствия:', data));
     </script>
 </body>
 </html>

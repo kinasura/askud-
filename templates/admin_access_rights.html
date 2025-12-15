@@ -8,8 +8,8 @@
 {% block content %}
 <div class="row">
     <div class="col-md-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white">
+        <div class="card">
+            <div class="card-header">
                 <h5 class="mb-0">
                     <i class="bi bi-people"></i> Сотрудники
                 </h5>
@@ -40,7 +40,7 @@
                     {% endfor %}
                 </div>
             </div>
-            <div class="card-footer bg-white">
+            <div class="card-footer">
                 <small class="text-muted">
                     Всего сотрудников: {{ employees|length }}
                 </small>
@@ -86,7 +86,7 @@
                             <thead>
                                 <tr>
                                     <th>Лаборатория</th>
-                                    <th>День недели</th>
+                                    <th>Дни недели</th>
                                     <th>Время доступа</th>
                                     <th>Длительность</th>
                                     <th>Действия</th>
@@ -135,16 +135,19 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">День недели *</label>
-                        <select class="form-select" id="dayOfWeek" required>
-                            <option value="0">Понедельник</option>
-                            <option value="1">Вторник</option>
-                            <option value="2">Среда</option>
-                            <option value="3">Четверг</option>
-                            <option value="4">Пятница</option>
-                            <option value="5">Суббота</option>
-                            <option value="6">Воскресенье</option>
-                        </select>
+                        <label class="form-label">Дни недели *</label>
+                        <div class="row">
+                            {% for day_index, day_name in [('0', 'Понедельник'), ('1', 'Вторник'), ('2', 'Среда'), ('3', 'Четверг'), ('4', 'Пятница'), ('5', 'Суббота'), ('6', 'Воскресенье')] %}
+                            <div class="col-4">
+                                <div class="form-check">
+                                    <input class="form-check-input day-checkbox" type="checkbox" value="{{ day_index }}" id="day{{ day_index }}">
+                                    <label class="form-check-label" for="day{{ day_index }}">
+                                        {{ day_name }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                     
                     <div class="row">
@@ -213,8 +216,23 @@
     function refreshSchedule() {
         if (!currentEmployeeId) return;
         
+        // Показываем индикатор загрузки
+        const tbody = document.getElementById('scheduleTableBody');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div>Загрузка...</td></tr>';
+        
         fetch(`/api/admin/employees/${currentEmployeeId}/access`)
-            .then(response => response.json())
+            .then(response => {
+                if (response.status === 404) {
+                    throw new Error('Сотрудник не найден');
+                }
+                if (response.status === 403) {
+                    throw new Error('Нет доступа');
+                }
+                if (!response.ok) {
+                    throw new Error(`HTTP ошибка! Статус: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     const tbody = document.getElementById('scheduleTableBody');
@@ -227,30 +245,88 @@
                             const end = schedule.time_end;
                             const duration = calculateDuration(start, end);
                             
+                            // Форматируем дни недели
+                            let dayNames = 'Не указаны';
+                            if (schedule.days_of_week) {
+                                try {
+                                    let daysArray;
+                                    if (Array.isArray(schedule.days_of_week)) {
+                                        daysArray = schedule.days_of_week;
+                                    } else if (typeof schedule.days_of_week === 'string') {
+                                        // Убираем возможные кавычки и скобки
+                                        let cleanStr = schedule.days_of_week.trim();
+                                        if (cleanStr.startsWith('[') && cleanStr.endsWith(']')) {
+                                            cleanStr = cleanStr.slice(1, -1);
+                                        }
+                                        if (cleanStr.startsWith('"') && cleanStr.endsWith('"')) {
+                                            cleanStr = cleanStr.slice(1, -1);
+                                        }
+                                        daysArray = cleanStr.split(',');
+                                    } else {
+                                        daysArray = [];
+                                    }
+                                    
+                                    dayNames = daysArray
+                                        .map(dayNum => {
+                                            const dayIndex = parseInt(dayNum.toString().trim());
+                                            return !isNaN(dayIndex) && dayIndex >= 0 && dayIndex < 7 ? 
+                                                daysOfWeek[dayIndex] : '';
+                                        })
+                                        .filter(Boolean)
+                                        .join(', ');
+                                } catch (error) {
+                                    console.error('Ошибка при форматировании дней недели:', error);
+                                    dayNames = 'Ошибка данных';
+                                }
+                            }
+                            
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>
-                                    <strong>${schedule.laboratory_name}</strong><br>
-                                    <small class="text-muted">${schedule.laboratory_code}</small>
+                                    <strong>${escapeHtml(schedule.laboratory_name || 'Неизвестно')}</strong><br>
+                                    <small class="text-muted">${escapeHtml(schedule.laboratory_code || '')}</small>
                                 </td>
-                                <td>${daysOfWeek[schedule.day_of_week] || 'Неизвестно'}</td>
+                                <td>${escapeHtml(dayNames)}</td>
                                 <td>
-                                    <span class="badge bg-primary">${start}</span> - 
-                                    <span class="badge bg-secondary">${end}</span>
+                                    <span class="badge bg-primary">${escapeHtml(start || '')}</span> - 
+                                    <span class="badge bg-secondary">${escapeHtml(end || '')}</span>
                                 </td>
-                                <td>${duration}</td>
+                                <td>${escapeHtml(duration || '0 час.')}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-warning me-1" 
-                                            onclick="editSchedule(${schedule.id}, ${schedule.laboratory_id}, ${schedule.day_of_week}, '${start}', '${end}')">
+                                    <button class="btn btn-sm btn-warning me-1 edit-schedule-btn" 
+                                            data-id="${schedule.id}"
+                                            data-lab-id="${schedule.laboratory_id}"
+                                            data-days='${JSON.stringify(schedule.days_of_week || [])}'
+                                            data-start="${start || ''}"
+                                            data-end="${end || ''}">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-danger" 
-                                            onclick="deleteSchedule(${schedule.id})">
+                                    <button class="btn btn-sm btn-danger delete-schedule-btn" 
+                                            data-id="${schedule.id}">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
                             `;
                             tbody.appendChild(row);
+                        });
+                        
+                        // Добавляем обработчики событий для новых кнопок
+                        document.querySelectorAll('.edit-schedule-btn').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                const scheduleId = parseInt(this.getAttribute('data-id'));
+                                const labId = parseInt(this.getAttribute('data-lab-id'));
+                                const daysStr = this.getAttribute('data-days');
+                                const start = this.getAttribute('data-start');
+                                const end = this.getAttribute('data-end');
+                                editSchedule(scheduleId, labId, daysStr, start, end);
+                            });
+                        });
+                        
+                        document.querySelectorAll('.delete-schedule-btn').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                const scheduleId = parseInt(this.getAttribute('data-id'));
+                                deleteSchedule(scheduleId);
+                            });
                         });
                     } else {
                         tbody.innerHTML = `
@@ -264,12 +340,21 @@
                         `;
                     }
                 } else {
-                    showError('Ошибка загрузки расписания');
+                    showError('Ошибка загрузки расписания: ' + (data.message || 'Неизвестная ошибка'));
                 }
             })
             .catch(error => {
                 console.error('Ошибка:', error);
-                showError('Ошибка соединения с сервером');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-danger">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <p class="mt-2 mb-0">Ошибка загрузки данных</p>
+                            <small>${escapeHtml(error.message)}</small>
+                        </td>
+                    </tr>
+                `;
+                showError('Ошибка загрузки расписания: ' + error.message);
             });
     }
     
@@ -296,14 +381,40 @@
     }
     
     // Редактирование расписания
-    function editSchedule(scheduleId, labId, day, start, end) {
+    function editSchedule(scheduleId, labId, daysStr, start, end) {
         document.getElementById('modalTitle').textContent = 'Редактирование расписания';
         document.getElementById('scheduleId').value = scheduleId;
         document.getElementById('employeeId').value = currentEmployeeId;
         document.getElementById('laboratoryId').value = labId;
-        document.getElementById('dayOfWeek').value = day;
         document.getElementById('timeStart').value = start;
         document.getElementById('timeEnd').value = end;
+        
+        // Сбрасываем все чекбоксы
+        document.querySelectorAll('.day-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // Устанавливаем выбранные дни
+        let daysArray = [];
+        try {
+            if (daysStr && daysStr.trim() !== '') {
+                daysArray = JSON.parse(daysStr);
+                if (!Array.isArray(daysArray)) {
+                    daysArray = [];
+                }
+            }
+        } catch (e) {
+            console.error('Ошибка парсинга дней недели:', e);
+            daysArray = [];
+        }
+        
+        // Отмечаем чекбоксы
+        daysArray.forEach(day => {
+            const checkbox = document.querySelector(`.day-checkbox[value="${day}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
         
         const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
         modal.show();
@@ -336,10 +447,13 @@
         const alert = document.createElement('div');
         alert.className = 'alert alert-success alert-dismissible fade show';
         alert.innerHTML = `
-            <i class="bi bi-check-circle me-2"></i>${message}
+            <i class="bi bi-check-circle me-2"></i>${escapeHtml(message)}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
-        document.querySelector('.container-fluid').prepend(alert);
+        const container = document.querySelector('.container-fluid') || document.querySelector('main') || document.body;
+        if (container) {
+            container.prepend(alert);
+        }
         
         setTimeout(() => {
             const bsAlert = new bootstrap.Alert(alert);
@@ -352,10 +466,20 @@
         const alert = document.createElement('div');
         alert.className = 'alert alert-danger alert-dismissible fade show';
         alert.innerHTML = `
-            <i class="bi bi-exclamation-triangle me-2"></i>${message}
+            <i class="bi bi-exclamation-triangle me-2"></i>${escapeHtml(message)}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
-        document.querySelector('.container-fluid').prepend(alert);
+        const container = document.querySelector('.container-fluid') || document.querySelector('main') || document.body;
+        if (container) {
+            container.prepend(alert);
+        }
+    }
+    
+    // Экранирование HTML для предотвращения XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     // Инициализация
@@ -398,6 +522,11 @@
             document.getElementById('timeStart').value = '08:00';
             document.getElementById('timeEnd').value = '18:00';
             
+            // Сбрасываем все чекбоксы дней
+            document.querySelectorAll('.day-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
             // Показ модального окна
             const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
             modal.show();
@@ -408,9 +537,15 @@
             const scheduleId = document.getElementById('scheduleId').value;
             const employeeId = document.getElementById('employeeId').value;
             
+            // Собираем выбранные дни недели
+            const selectedDays = [];
+            document.querySelectorAll('.day-checkbox:checked').forEach(checkbox => {
+                selectedDays.push(parseInt(checkbox.value));
+            });
+            
             const scheduleData = {
-                laboratory_id: document.getElementById('laboratoryId').value,
-                day_of_week: document.getElementById('dayOfWeek').value,
+                laboratory_id: parseInt(document.getElementById('laboratoryId').value),
+                days_of_week: selectedDays,
                 time_start: document.getElementById('timeStart').value,
                 time_end: document.getElementById('timeEnd').value
             };
@@ -421,8 +556,25 @@
                 return;
             }
             
+            if (scheduleData.days_of_week.length === 0) {
+                alert('Выберите хотя бы один день недели');
+                return;
+            }
+            
+            // Проверка времени
             if (scheduleData.time_start >= scheduleData.time_end) {
                 alert('Время окончания должно быть больше времени начала');
+                return;
+            }
+            
+            // Дополнительная проверка на одинаковое время
+            const startTime = new Date(`2000-01-01T${scheduleData.time_start}`);
+            const endTime = new Date(`2000-01-01T${scheduleData.time_end}`);
+            let diff = endTime - startTime;
+            if (diff < 0) diff += 24 * 60 * 60 * 1000;
+
+            if (diff === 0) {
+                alert('Время начала и окончания не могут быть одинаковыми');
                 return;
             }
             
@@ -436,11 +588,16 @@
             saveBtn.disabled = true;
             
             // Определяем URL и метод
-            const url = scheduleId 
-                ? `/api/admin/employees/${employeeId}/access/${scheduleId}`
-                : `/api/admin/employees/${employeeId}/access`;
-            
-            const method = scheduleId ? 'PUT' : 'POST';
+            let url, method;
+            if (scheduleId) {
+                // Для редактирования существующего расписания
+                url = `/api/admin/access_rule/${scheduleId}`;
+                method = 'PUT';
+            } else {
+                // Для создания нового расписания
+                url = `/api/admin/employees/${employeeId}/access`;
+                method = 'POST';
+            }
             
             // Отправка запроса
             fetch(url, {
@@ -450,7 +607,12 @@
                 },
                 body: JSON.stringify(scheduleData)
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ошибка! Статус: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 // Скрыть спиннер
                 saveText.classList.remove('d-none');
@@ -460,7 +622,9 @@
                 if (data.success) {
                     // Закрываем модальное окно
                     const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleModal'));
-                    modal.hide();
+                    if (modal) {
+                        modal.hide();
+                    }
                     
                     // Показываем сообщение об успехе
                     showSuccess(scheduleId ? 'Расписание обновлено' : 'Расписание добавлено');
@@ -468,7 +632,7 @@
                     // Обновляем расписание
                     refreshSchedule();
                 } else {
-                    showError('Ошибка: ' + data.message);
+                    showError('Ошибка: ' + (data.message || 'Неизвестная ошибка'));
                 }
             })
             .catch(error => {
@@ -479,15 +643,9 @@
                 spinner.classList.add('d-none');
                 saveBtn.disabled = false;
                 
-                showError('Ошибка соединения с сервером');
+                showError('Ошибка соединения с сервером: ' + error.message);
             });
         });
-        
-        // Выбираем первого сотрудника по умолчанию
-        const firstEmployee = document.querySelector('.employee-item');
-        if (firstEmployee) {
-            firstEmployee.click();
-        }
     });
 </script>
 {% endblock %}

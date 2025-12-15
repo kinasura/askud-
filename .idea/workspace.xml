@@ -5,16 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2f463b0c-59be-40e7-90b0-6bcafa30b56d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/Courseache.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swagger_config.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_system.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.gitignorereportsDLL" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/admin_access_rights.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/admin_access_rights.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/admin_base.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/admin_base.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/admin_employees.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/admin_employees.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/admin_import_export.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/admin_import_export.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/admin_login.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/admin_login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/admin_reports.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/admin_reports.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/base.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/employee_dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/employee_dashboard.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/terminal.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/terminal.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_system.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_system.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,17 +47,17 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.OpenAPI.executor": "Run",
-    "Python.app.executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.test_system.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "master",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.OpenAPI.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_system.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\kinas\PycharmProjects\Courseache\tests" />

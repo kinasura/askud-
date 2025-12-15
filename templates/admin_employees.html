@@ -13,67 +13,83 @@
 </div>
 
 <!-- Таблица сотрудников -->
-<div class="table-responsive">
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>ФИО</th>
-                <th>PIN-код</th>
-                <th>Отдел</th>
-                <th>Доступ к лабораториям</th>
-                <th>Статус</th>
-                <th>Дата создания</th>
-                <th>Действия</th>
-            </tr>
-        </thead>
-        <tbody id="employeesTableBody">
-            {% for emp in employees %}
-            <tr data-employee-id="{{ emp.id }}">
-                <td>{{ emp.id }}</td>
-                <td>{{ emp.full_name }}</td>
-                <td><span class="badge bg-secondary">{{ emp.pin_code }}</span></td>
-                <td>{{ emp.department }}</td>
-                <td>
-                    {% if emp.accessible_labs %}
-                        {% set labs_list = emp.accessible_labs.split(',') if emp.accessible_labs else [] %}
-                        <span class="badge bg-info">{{ labs_list|length }}</span> лабораторий
-                    {% else %}
-                        <span class="badge bg-warning">Нет доступа</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if emp.is_active %}
-                        <span class="badge bg-success">Активен</span>
-                    {% else %}
-                        <span class="badge bg-danger">Неактивен</span>
-                    {% endif %}
-                </td>
-                <td>{{ emp.created_at }}</td>
-                <td>
-                    <button class="btn btn-sm btn-warning btn-edit" data-id="{{ emp.id }}" title="Редактировать">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-info btn-access" data-id="{{ emp.id }}" title="Управление доступом">
-                        <i class="bi bi-door-closed"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger btn-delete" data-id="{{ emp.id }}" title="Удалить">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="bi bi-people"></i> Список сотрудников
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>ФИО</th>
+                        <th>PIN-код</th>
+                        <th>Отдел</th>
+                        <th>Доступ к лабораториям</th>
+                        <th>Статус</th>
+                        <th>Дата создания</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="employeesTableBody">
+                    {% for emp in employees %}
+                    <tr data-employee-id="{{ emp.id }}" class="employee-row">
+                        <td>{{ emp.id }}</td>
+                        <td class="fw-semibold">{{ emp.full_name }}</td>
+                        <td><span class="badge bg-secondary">{{ emp.pin_code }}</span></td>
+                        <td>{{ emp.department }}</td>
+                        <td>
+                            {% if emp.accessible_labs %}
+                                {% set labs_list = emp.accessible_labs.split(',') if emp.accessible_labs else [] %}
+                                <span class="badge bg-info">{{ labs_list|length }}</span> лабораторий
+                            {% else %}
+                                <span class="badge bg-warning">Нет доступа</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if emp.is_active %}
+                                <span class="badge bg-success">Активен</span>
+                            {% else %}
+                                <span class="badge bg-danger">Неактивен</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ emp.created_at }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-warning btn-edit" data-id="{{ emp.id }}" title="Редактировать">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-info btn-access" data-id="{{ emp.id }}" title="Управление доступом">
+                                    <i class="bi bi-door-closed"></i>
+                                </button>
+                                <button class="btn btn-danger btn-delete" data-id="{{ emp.id }}" title="Удалить">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-white">
+        <small class="text-muted">
+            Всего сотрудников: {{ employees|length }}
+        </small>
+    </div>
 </div>
 
 <!-- Модальное окно добавления сотрудника -->
 <div class="modal fade" id="addEmployeeModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">Добавить сотрудника</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <ul class="nav nav-tabs" id="addEmployeeTabs" role="tablist">
@@ -154,9 +170,9 @@
 <div class="modal fade" id="editEmployeeModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">Редактировать сотрудника</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <ul class="nav nav-tabs" id="editEmployeeTabs" role="tablist">
@@ -227,11 +243,11 @@
                         </div>
                         
                         <div class="table-responsive">
-                            <table class="table table-sm" id="accessRulesTable">
+                            <table class="table table-sm table-hover" id="accessRulesTable">
                                 <thead>
                                     <tr>
                                         <th>Лаборатория</th>
-                                        <th>День недели</th>
+                                        <th>Дни недели</th>
                                         <th>Время начала</th>
                                         <th>Время окончания</th>
                                         <th>Действия</th>
@@ -262,9 +278,9 @@
 <div class="modal fade" id="accessManagementModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="accessModalTitle">Управление доступом к лабораториям</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -306,9 +322,9 @@
 <div class="modal fade" id="accessRuleModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="accessRuleModalTitle">Добавить правило доступа</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="accessRuleForm">
@@ -364,6 +380,68 @@
         </div>
     </div>
 </div>
+
+<style>
+    /* Исправление контрастности для таблиц в темной теме */
+    [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: var(--text-color) !important;
+    }
+    
+    [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > * {
+        background-color: var(--card-bg) !important;
+        color: var(--text-color) !important;
+    }
+    
+    [data-theme="dark"] .table-hover > tbody > tr:hover > * {
+        background-color: rgba(108, 99, 255, 0.2) !important;
+        color: var(--text-color) !important;
+    }
+    
+    [data-theme="dark"] .table thead th {
+        background-color: var(--primary-color) !important;
+        color: white !important;
+        border-bottom-color: var(--border-color) !important;
+    }
+    
+    /* Улучшение читаемости текста в ячейках */
+    [data-theme="dark"] .employee-row td {
+        color: var(--text-color) !important;
+    }
+    
+    [data-theme="dark"] .employee-row .fw-semibold {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Стили для модальных окон */
+    [data-theme="dark"] .modal-header.bg-primary {
+        background-color: var(--primary-color) !important;
+    }
+    
+    [data-theme="dark"] .modal-title {
+        color: white !important;
+    }
+    
+    [data-theme="dark"] .btn-close-white {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+    
+    /* Улучшение видимости разделителей в таблицах */
+    [data-theme="dark"] .table td,
+    [data-theme="dark"] .table th {
+        border-color: var(--border-color) !important;
+    }
+    
+    /* Улучшение контрастности для текста в ячейках с бейджами */
+    [data-theme="dark"] .badge {
+        color: white !important;
+    }
+    
+    [data-theme="dark"] .badge.bg-warning {
+        color: #212529 !important;
+    }
+</style>
 
 {% endblock %}
 
@@ -426,6 +504,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 // Функция отображения управления доступом
 async function showAccessManagement(employeeId) {
@@ -562,10 +646,10 @@ async function loadAccessRuleData(ruleId) {
         document.getElementById('accessTimeStart').value = rule.time_start || '08:00';
         document.getElementById('accessTimeEnd').value = rule.time_end || '20:00';
         
-        // Устанавливаем дни недели
+        // Устанавливаем дни недели из строки "0,2,4" в массив
         document.querySelectorAll('.day-checkbox').forEach(checkbox => {
             const dayValue = parseInt(checkbox.value);
-            checkbox.checked = rule.days_of_week && rule.days_of_week.includes(dayValue.toString());
+            checkbox.checked = rule.days_of_week && rule.days_of_week.includes(dayValue);
         });
         
     } catch (error) {
@@ -577,7 +661,6 @@ async function loadAccessRuleData(ruleId) {
 // Сохранить правило доступа
 async function saveAccessRule() {
     try {
-        // Собираем данные
         const ruleId = document.getElementById('accessRuleId').value;
         const employeeId = document.getElementById('accessEmployeeId').value;
         const laboratoryId = document.getElementById('accessLaboratoryId').value;
@@ -672,7 +755,10 @@ async function saveAccessRule() {
 async function loadAccessRulesForEdit(employeeId) {
     try {
         const response = await fetch(`/api/admin/employees/${employeeId}/access`);
-        if (!response.ok) return;
+        if (!response.ok) {
+            console.error('Ошибка HTTP:', response.status);
+            return;
+        }
         
         const result = await response.json();
         const accessRulesBody = document.getElementById('accessRulesBody');
@@ -686,11 +772,11 @@ async function loadAccessRulesForEdit(employeeId) {
         
         if (noAccessRules) noAccessRules.style.display = 'none';
         
-        // Формируем таблицу
+        // Формируем таблицу с экранированием
         let html = '';
         result.access_rights.forEach(rule => {
             // Форматируем дни недели
-            const days = rule.days_of_week || '';
+            const days = rule.days_of_week || [];
             const dayNames = Array.isArray(days)
                 ? days.map(dayNum => {
                     const dayIndex = parseInt(dayNum);
@@ -700,10 +786,10 @@ async function loadAccessRulesForEdit(employeeId) {
             
             html += `
                 <tr>
-                    <td>${rule.laboratory_name || 'Неизвестно'}</td>
-                    <td>${dayNames || 'Все дни'}</td>
-                    <td>${rule.time_start || '08:00'}</td>
-                    <td>${rule.time_end || '20:00'}</td>
+                    <td>${escapeHtml(rule.laboratory_name || 'Неизвестно')}</td>
+                    <td>${escapeHtml(dayNames || 'Все дни')}</td>
+                    <td>${escapeHtml(rule.time_start || '08:00')}</td>
+                    <td>${escapeHtml(rule.time_end || '20:00')}</td>
                     <td>
                         <button class="btn btn-sm btn-warning" onclick="editAccessRuleFromEdit(${rule.id})">
                             <i class="bi bi-pencil"></i>
@@ -720,6 +806,11 @@ async function loadAccessRulesForEdit(employeeId) {
         
     } catch (error) {
         console.error('Error loading access rules for edit:', error);
+        const noAccessRules = document.getElementById('noAccessRules');
+        if (noAccessRules) {
+            noAccessRules.style.display = 'block';
+            noAccessRules.innerHTML = '<i class="bi bi-exclamation-triangle"></i><p class="mt-2">Ошибка загрузки данных</p>';
+        }
     }
 }
 
@@ -771,7 +862,7 @@ async function deleteAccessRuleFromEdit(ruleId) {
         } else {
             alert('Ошибка: ' + result.message);
         }
-    } catch (error) {
+   } catch (error) {
         console.error('Error deleting access rule:', error);
         alert('Ошибка удаления: ' + error.message);
     }
@@ -935,7 +1026,7 @@ async function updateEmployee() {
         updateButton.disabled = false;
         
         if (result.success) {
-            // Закрываем модальное окно и обновляем страницу
+            // Закрываем модальное окно и обновляют страницу
             const modal = bootstrap.Modal.getInstance(document.getElementById('editEmployeeModal'));
             modal.hide();
             setTimeout(() => location.reload(), 500);

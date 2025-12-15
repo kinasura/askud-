@@ -10,11 +10,34 @@
         :root {
             --primary-color: #2c3e50;
             --secondary-color: #3498db;
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --card-bg: #ffffff;
+            --sidebar-bg: #ffffff;
+            --border-color: #dee2e6;
+            --hover-bg: #f0f7ff;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --status-bg: #f8f9fa;
+        }
+        
+        [data-theme="dark"] {
+            --primary-color: #1a1a2e;
+            --secondary-color: #6c63ff;
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --sidebar-bg: #1a1a1a;
+            --border-color: #333333;
+            --hover-bg: #2a2a3e;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --status-bg: #2d2d2d;
         }
         
         body {
-            background-color: #f8f9fa;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
         }
         
         .navbar-main {
@@ -48,14 +71,17 @@
         
         .card {
             border: none;
-            box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+            box-shadow: 0 3px 15px var(--shadow-color);
             border-radius: 10px;
             margin-bottom: 20px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            transition: background-color 0.3s, box-shadow 0.3s;
         }
         
         .card-header {
-            background: white;
-            border-bottom: 1px solid #e9ecef;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
             border-radius: 10px 10px 0 0 !important;
             padding: 1rem 1.25rem;
         }
@@ -85,9 +111,111 @@
             min-height: calc(100vh - 200px);
             padding: 20px 0;
         }
+        
+        .dropdown-menu {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+        }
+        
+        .dropdown-item {
+            color: var(--text-color);
+        }
+        
+        .dropdown-item:hover {
+            background-color: var(--hover-bg);
+            color: var(--secondary-color);
+        }
+        
+        .alert {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        
+        .form-control, .form-select {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background-color: var(--card-bg);
+            border-color: var(--secondary-color);
+            color: var(--text-color);
+            box-shadow: 0 0 0 0.25rem rgba(108, 99, 255, 0.25);
+        }
+        
+        .form-control::placeholder {
+            color: #6c757d;
+        }
+        
+        .text-muted {
+            color: #6c757d !important;
+        }
+        
+        .theme-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: var(--hover-bg);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-right: 15px;
+        }
+        
+        .theme-switch::before {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--secondary-color);
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+        
+        [data-theme="dark"] .theme-switch::before {
+            transform: translateX(30px);
+        }
+        
+        .theme-switch i {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            color: var(--text-color);
+        }
+        
+        .theme-switch i.bi-sun {
+            left: 8px;
+        }
+        
+        .theme-switch i.bi-moon {
+            right: 8px;
+        }
+        
+        .nav-link.text-white {
+            color: #fff !important;
+        }
+        
+        [data-theme="dark"] .navbar-brand,
+        [data-theme="dark"] .nav-link.text-white {
+            color: #fff !important;
+        }
+        
+        .table {
+            color: var(--text-color);
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: var(--hover-bg);
+            cursor: pointer;
+        }
     </style>
 </head>
-<body>
+<body data-theme="light">
     <!-- Навигационная панель -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-main">
         <div class="container-fluid">
@@ -119,7 +247,15 @@
                     </li>
                 </ul>
                 
-                <div class="navbar-nav">
+                <div class="navbar-nav align-items-center">
+                    <!-- Переключатель темы -->
+                    <div class="nav-item me-3">
+                        <div class="theme-switch" id="themeToggle">
+                            <i class="bi bi-sun"></i>
+                            <i class="bi bi-moon"></i>
+                        </div>
+                    </div>
+                    
                     <div class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle d-flex align-items-center user-menu" href="#" 
                            role="button" data-bs-toggle="dropdown">
@@ -245,7 +381,43 @@
             // Проверка статуса каждые 30 секунд
             setInterval(updateSystemStatus, 30000);
             updateSystemStatus();
+            
+            // Загрузка сохраненной темы
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+            
+            // Применение темы Bootstrap
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-bs-theme', 'light');
+            }
         });
+        
+        // Переключение темы
+        document.getElementById('themeToggle').addEventListener('click', function() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            // Применение темы
+            document.body.setAttribute('data-theme', newTheme);
+            document.documentElement.setAttribute('data-bs-theme', newTheme);
+            
+            // Сохранение в localStorage
+            localStorage.setItem('theme', newTheme);
+            
+            // Обновление иконок в таблицах, если они есть
+            updateTableIcons(newTheme);
+        });
+        
+        // Функция для обновления иконок в таблицах при смене темы
+        function updateTableIcons(theme) {
+            // Эта функция может быть переопределена на конкретных страницах
+            // если нужно обновить специфичные элементы
+            if (typeof window.updateThemeSpecificElements === 'function') {
+                window.updateThemeSpecificElements(theme);
+            }
+        }
     </script>
     
     {% block scripts %}{% endblock %}

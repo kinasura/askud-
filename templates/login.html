@@ -1,251 +1,287 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход в систему - АСКУД</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
     <style>
         :root {
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #212529;
+            --border-color: #dee2e6;
+            --input-bg: #ffffff;
+            --input-border: #ced4da;
             --primary-color: #2c3e50;
             --secondary-color: #3498db;
         }
         
+        [data-bs-theme="dark"] {
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --text-primary: #f8f9fa;
+            --border-color: #495057;
+            --input-bg: #2d2d2d;
+            --input-border: #495057;
+            --primary-color: #1a1a2e;
+            --secondary-color: #6c63ff;
+        }
+        
         body {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #1a2530 100%);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             height: 100vh;
             display: flex;
             align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s, color 0.3s;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            overflow: hidden;
+        .login-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            transition: background-color 0.3s, border-color 0.3s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
         
-        .login-header {
-            background: var(--primary-color);
-            color: white;
-            padding: 30px;
-            text-align: center;
+        .form-control {
+            background-color: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-primary);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
         }
         
-        .login-body {
-            padding: 40px;
+        .form-control:focus {
+            background-color: var(--input-bg);
+            border-color: var(--secondary-color);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 0.25rem rgba(108, 99, 255, 0.25);
         }
         
-        .auth-methods {
-            display: flex;
-            border-bottom: 2px solid #e9ecef;
-            margin-bottom: 25px;
-        }
-        
-        .auth-tab {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            cursor: pointer;
-            border: none;
-            background: none;
-            font-weight: 500;
-            transition: all 0.3s;
-            color: #6c757d;
-        }
-        
-        .auth-tab.active {
-            color: var(--secondary-color);
-            border-bottom: 3px solid var(--secondary-color);
-        }
-        
-        .input-group-icon {
+        .theme-switch {
             position: relative;
+            width: 60px;
+            height: 30px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-right: 15px;
         }
         
-        .input-group-icon i {
+        .theme-switch::before {
+            content: '';
             position: absolute;
-            left: 15px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--secondary-color);
+            top: 1px;
+            left: 1px;
+            transition: transform 0.3s;
+        }
+        
+        [data-bs-theme="dark"] .theme-switch::before {
+            transform: translateX(30px);
+        }
+        
+        .theme-switch i {
+            position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            color: #6c757d;
-            z-index: 10;
+            font-size: 14px;
+            color: var(--text-primary);
         }
         
-        .input-group-icon input {
-            padding-left: 45px;
+        .theme-switch i.bi-sun {
+            left: 8px;
         }
         
-        .forgot-password {
-            text-align: right;
-            margin-top: 10px;
+        .theme-switch i.bi-moon {
+            right: 8px;
         }
         
-        .login-footer {
-            background: #f8f9fa;
-            padding: 20px;
-            text-align: center;
-            border-top: 1px solid #e9ecef;
+        .theme-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
-        @media (max-width: 768px) {
-            .login-container {
-                margin: 15px;
-                border-radius: 15px;
-            }
-            
-            .login-body {
-                padding: 25px;
-            }
+        .btn-primary {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            opacity: 0.9;
+        }
+        
+        .btn-outline-secondary {
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        
+        .btn-outline-secondary:hover {
+            background-color: var(--input-bg);
+            border-color: var(--secondary-color);
+            color: var(--secondary-color);
+        }
+        
+        .alert {
+            background-color: var(--input-bg);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .alert-success {
+            background-color: rgba(40, 167, 69, 0.2);
+            border-color: #28a745;
+            color: #d4edda;
+        }
+        
+        .alert-danger {
+            background-color: rgba(220, 53, 69, 0.2);
+            border-color: #dc3545;
+            color: #f8d7da;
+        }
+        
+        .alert-warning {
+            background-color: rgba(255, 193, 7, 0.2);
+            border-color: #ffc107;
+            color: #fff3cd;
+        }
+        
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        
+        [data-bs-theme="dark"] .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-5">
-                <div class="login-container">
-                    <!-- Заголовок -->
-                    <div class="login-header">
-                        <h1 class="h3 mb-2">
-                            <i class="bi bi-shield-lock"></i> АСКУД
-                        </h1>
-                        <p class="mb-0">Автоматизированная система контроля доступа</p>
-                    </div>
-
-                    <!-- Сообщения -->
-                    <div class="login-body">
-                        {% with messages = get_flashed_messages(with_categories=true) %}
-                            {% if messages %}
-                                {% for category, message in messages %}
-                                    <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
-                                        <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' if category == 'warning' else 'info-circle' }} me-2"></i>
-                                        {{ message }}
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-                        {% endwith %}
-
-                        <!-- Форма входа -->
-                        <form method="POST" action="{{ url_for('login') }}">
-                            <div class="mb-4">
-                                <div class="input-group-icon">
-                                    <i class="bi bi-person"></i>
-                                    <input type="text" class="form-control form-control-lg" 
-                                           id="username" name="username" 
-                                           placeholder="Введите логин" required autofocus>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <div class="input-group-icon">
-                                    <i class="bi bi-key"></i>
-                                    <input type="password" class="form-control form-control-lg" 
-                                           id="password" name="password" 
-                                           placeholder="Введите пароль" required>
-                                </div>
-                                <div class="forgot-password">
-                                    <a href="#" class="text-muted small" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
-                                        <i class="bi bi-question-circle"></i> Забыли пароль?
-                                    </a>
-                                </div>
-                            </div>
-                            
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary btn-lg py-3">
-                                    <i class="bi bi-box-arrow-in-right"></i> Войти в систему
-                                </button>
-                            </div>
-                        </form>
-
-                        <!-- Альтернативные варианты -->
-                        <div class="text-center mt-4">
-                            <p class="text-muted mb-3">или</p>
-                            <div class="d-grid gap-2">
-                                <a href="/terminal" class="btn btn-outline-primary">
-                                    <i class="bi bi-terminal"></i> Перейти к терминалу доступа
-                                </a>
-                                <a href="/" class="btn btn-outline-secondary">
-                                    <i class="bi bi-house"></i> На главную страницу
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <!-- Информация -->
-                        <div class="alert alert-info mt-4">
-                            <div class="d-flex">
-                                <i class="bi bi-info-circle me-2"></i>
-                                <div>
-                                    <small>
-                                        <strong>Тестовый доступ:</strong><br>
-                                        Администратор: логин "admin", пароль "admin123"<br>
-                                        Сотрудник: логин "ivanov", пароль "ivanov123"
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Футер -->
-                    <div class="login-footer">
-                        <small class="text-muted">
-                            <i class="bi bi-shield-check"></i> АО "КОНСИСТ-ОС" &copy; 2025<br>
-                            Версия системы: 2.0
-                        </small>
-                    </div>
-                </div>
-            </div>
+    <!-- Theme switcher -->
+    <div class="theme-container">
+        <div class="theme-switch" id="themeToggle">
+            <i class="bi bi-sun"></i>
+            <i class="bi bi-moon"></i>
         </div>
+        <small class="text-muted">Тема</small>
     </div>
-
-    <!-- Модальное окно восстановления пароля -->
-    <div class="modal fade" id="forgotPasswordModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="bi bi-key"></i> Восстановление пароля
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Для восстановления пароля обратитесь к системному администратору:</p>
-                    <ul>
-                        <li>Телефон: +7 (495) 123-45-67</li>
-                        <li>Email: support@askud.ru</li>
-                        <li>Кабинет: Корпус А, этаж 3, каб. 301</li>
-                    </ul>
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        Восстановление пароля доступно только при личном обращении с документом, удостоверяющим личность.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-                </div>
-            </div>
+    
+    <!-- Login form -->
+    <div class="login-card shadow">
+        <div class="text-center mb-4">
+            <i class="bi bi-shield-lock display-4" style="color: var(--secondary-color);"></i>
+            <h1 class="h3 mb-3">АСКУД Система</h1>
+            <p class="text-muted">Вход в административную панель</p>
         </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Фокус на поле ввода при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function() {
-            const usernameField = document.getElementById('username');
-            if (usernameField) {
-                usernameField.focus();
-            }
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="mb-3">
+                <label class="form-label">Логин</label>
+                <input type="text" class="form-control" name="username" required autofocus>
+            </div>
             
-            // Автозаполнение тестовых данных для удобства
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                document.getElementById('username').value = 'admin';
-                document.getElementById('password').value = 'admin123';
+            <div class="mb-3">
+                <label class="form-label">Пароль</label>
+                <input type="password" class="form-control" name="password" required>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-box-arrow-in-right"></i> Войти
+                </button>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> На главную
+                </a>
+            </div>
+        </form>
+        
+        <div class="text-center mt-4">
+            <small class="text-muted">
+                <i class="bi bi-info-circle"></i> Для теста: admin / admin123
+            </small>
+        </div>
+    </div>
+    
+    <script>
+        // Theme management
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+        
+        // Функция для установки темы
+        function setTheme(theme) {
+            htmlElement.setAttribute('data-bs-theme', theme);
+            localStorage.setItem('theme', theme);
+            
+            // Обновляем тему Bootstrap
+            if (theme === 'dark') {
+                document.documentElement.style.setProperty('--bs-body-bg', 'var(--bg-primary)');
+                document.documentElement.style.setProperty('--bs-body-color', 'var(--text-primary)');
+            }
+        }
+        
+        // Функция для переключения темы
+        function toggleTheme() {
+            const currentTheme = htmlElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+        
+        // Инициализация темы при загрузке
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            if (savedTheme) {
+                setTheme(savedTheme);
+            } else if (systemPrefersDark) {
+                setTheme('dark');
+            } else {
+                setTheme('light');
+            }
+        }
+        
+        // Обработчики событий
+        themeToggle.addEventListener('click', toggleTheme);
+        
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!localStorage.getItem('theme')) {
+                setTheme(e.matches ? 'dark' : 'light');
             }
         });
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', initTheme);
     </script>
 </body>
 </html>

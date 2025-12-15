@@ -10,12 +10,18 @@ from functools import wraps
 
 # Дополнительные импорты
 try:
+    from fpdf import FPDF
+    HAS_FPDF = True
+except ImportError:
+    HAS_FPDF = False
+try:
     import pandas as pd
     HAS_PANDAS = True
+    print("Pandas установлен. Экспорт в Excel будет доступен.")
 except ImportError:
     HAS_PANDAS = False
-    print("⚠️  Pandas не установлен. Экспорт в Excel будет недоступен.")
-    print("   Установите: pip install pandas openpyxl")
+    print("⚠️ Pandas не установлен. Экспорт в Excel будет недоступен.")
+    print(" Установите: pip install pandas openpyxl")
 app = Flask(__name__)
 app.secret_key = 'askud_secret_key_2025'
 
@@ -31,7 +37,6 @@ USER_TYPE_ADMIN = 'admin'
 
 def init_database():
     """Инициализация базы данных с расширенной структурой"""
-
     conn = None
     cursor = None
 
@@ -39,7 +44,6 @@ def init_database():
         if os.path.exists('access_system.db'):
             # Не удаляем базу для сохранения данных
             print("📁 Используется существующая база данных")
-
             conn = sqlite3.connect('access_system.db')
             cursor = conn.cursor()
 
@@ -48,7 +52,7 @@ def init_database():
             if not cursor.fetchone():
                 print("⚠️  Таблица reports не найдена, создаём...")
                 cursor.execute('''
-                    CREATE TABLE reports (
+                    CREATE TABLE IF NOT EXISTS reports (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         name TEXT NOT NULL,
                         report_type TEXT NOT NULL,
@@ -113,11 +117,12 @@ def init_database():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 employee_id INTEGER,
                 laboratory_id INTEGER,
-                day_of_week INTEGER,
+                days_of_week TEXT,
                 time_start TIME,
                 time_end TIME,
                 FOREIGN KEY (employee_id) REFERENCES employees (id),
-                FOREIGN KEY (laboratory_id) REFERENCES laboratories (id)
+                FOREIGN KEY (laboratory_id) REFERENCES laboratories (id),
+                UNIQUE(employee_id, laboratory_id)
             )
         ''')
 
@@ -207,21 +212,14 @@ def init_database():
 
         # Назначаем права доступа
         access_schedules = [
-            (2, 1, 0, '08:00', '20:00'),
-            (2, 1, 1, '08:00', '20:00'),
-            (2, 1, 2, '08:00', '20:00'),
-            (3, 2, 0, '09:00', '18:00'),
-            (3, 2, 1, '09:00', '18:00'),
-            (4, 3, 0, '08:30', '17:30'),
-            (5, 4, 0, '10:00', '22:00'),
-            (5, 4, 1, '10:00', '22:00'),
-            (5, 4, 2, '10:00', '22:00'),
-            (5, 4, 3, '10:00', '22:00'),
-            (5, 4, 4, '10:00', '22:00'),
+            (2, 1, '0,1,2,3,4', '08:00', '20:00'),  # Сотрудник 2, лаборатория 1, пн-пт
+            (3, 2, '0,1,2,3,4', '09:00', '18:00'),  # Сотрудник 3, лаборатория 2, пн-пт
+            (4, 3, '0,2,4', '08:30', '17:30'),  # Сотрудник 4, лаборатория 3, пн, ср, пт
+            (5, 4, '0,1,2,3,4', '10:00', '22:00'),  # Сотрудник 5, лаборатория 4, пн-пт
         ]
 
         cursor.executemany(
-            "INSERT INTO access_schedules (employee_id, laboratory_id, day_of_week, time_start, time_end) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO access_schedules (employee_id, laboratory_id, days_of_week, time_start, time_end) VALUES (?, ?, ?, ?, ?)",
             access_schedules
         )
 
@@ -236,6 +234,7 @@ def init_database():
         if conn:
             conn.close()
 
+
 # Добавьте этот фильтр для Jinja2
 @app.template_filter('split')
 def split_filter(s, delimiter=','):
@@ -243,6 +242,8 @@ def split_filter(s, delimiter=','):
     if not s:
         return []
     return s.split(delimiter)
+
+
 # Декоратор для проверки аутентификации
 def login_required(f):
     @wraps(f)
@@ -260,9 +261,8 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_type' not in session or session['user_type'] != 'admin':
             flash('Требуются права администратора', 'danger')
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('index'))  # Или 'employee_dashboard'
         return f(*args, **kwargs)
-
     return decorated_function
 
 
@@ -301,10 +301,10 @@ def verify_access(employee_id, laboratory_id, method='pin'):
 
     # Проверяем расписание доступа
     cursor.execute('''
-        SELECT time_start, time_end 
+        SELECT time_start, time_end, days_of_week 
         FROM access_schedules 
-        WHERE employee_id = ? AND laboratory_id = ? AND day_of_week = ?
-    ''', (employee_id, laboratory_id, day_of_week))
+        WHERE employee_id = ? AND laboratory_id = ?
+    ''', (employee_id, laboratory_id))
 
     schedule = cursor.fetchone()
 
@@ -317,6 +317,20 @@ def verify_access(employee_id, laboratory_id, method='pin'):
         conn.commit()
         conn.close()
         return False, "Доступ в эту лабораторию не разрешён"
+
+    # Проверяем, разрешен ли доступ в текущий день недели
+    days_allowed = schedule['days_of_week']
+    if days_allowed:
+        # Преобразуем строку дней в список
+        allowed_days = [int(d) for d in days_allowed.split(',') if d.isdigit()]
+        if day_of_week not in allowed_days:
+            cursor.execute(
+                "INSERT INTO access_events (employee_id, laboratory_id, event_type, success, reason, method) VALUES (?, ?, 'entry', FALSE, 'День недели не разрешен', ?)",
+                (employee_id, laboratory_id, method)
+            )
+            conn.commit()
+            conn.close()
+            return False, f"Доступ в этот день недели не разрешен"
 
     time_start = time.fromisoformat(schedule['time_start'])
     time_end = time.fromisoformat(schedule['time_end'])
@@ -378,7 +392,7 @@ def get_statistics():
     cursor.execute("SELECT COUNT(*) FROM current_presence")
     active_count = cursor.fetchone()[0]
 
-    # Событий сегодня - ИСПРАВЛЕННАЯ ВЕРСИЯ
+    # Событий сегодня
     today = datetime.now().strftime('%Y-%m-%d')
     cursor.execute("""
         SELECT COUNT(*) FROM access_events 
@@ -396,12 +410,75 @@ def get_statistics():
     }
 
 
+def migrate_old_data():
+    """Миграция старых данных из старого формата в новый"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Проверяем, существует ли столбец day_of_week
+        cursor.execute("PRAGMA table_info(access_schedules)")
+        columns = [col[1] for col in cursor.fetchall()]
+
+        if 'day_of_week' in columns and 'days_of_week' not in columns:
+            print("🔄 Обнаружена старая структура данных, начинаю миграцию...")
+
+            # Создаем временную таблицу для группировки данных
+            cursor.execute('''
+                SELECT employee_id, laboratory_id, 
+                       GROUP_CONCAT(day_of_week) as days_of_week,
+                       time_start, time_end
+                FROM access_schedules
+                GROUP BY employee_id, laboratory_id, time_start, time_end
+            ''')
+
+            grouped_data = cursor.fetchall()
+
+            # Создаем новую таблицу
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS access_schedules_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    employee_id INTEGER,
+                    laboratory_id INTEGER,
+                    days_of_week TEXT,
+                    time_start TIME,
+                    time_end TIME,
+                    FOREIGN KEY (employee_id) REFERENCES employees (id),
+                    FOREIGN KEY (laboratory_id) REFERENCES laboratories (id),
+                    UNIQUE(employee_id, laboratory_id)
+                )
+            ''')
+
+            # Вставляем новые данные
+            for row in grouped_data:
+                cursor.execute('''
+                    INSERT INTO access_schedules_new 
+                    (employee_id, laboratory_id, days_of_week, time_start, time_end)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (row[0], row[1], row[2], row[3], row[4]))
+
+            # Удаляем старую таблицу и переименовываем новую
+            cursor.execute("DROP TABLE access_schedules")
+            cursor.execute("ALTER TABLE access_schedules_new RENAME TO access_schedules")
+
+            conn.commit()
+            print("✅ Миграция данных завершена успешно")
+        else:
+            print("✅ Структура данных уже обновлена")
+
+    except Exception as e:
+        print(f"❌ Ошибка миграции данных: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+
 # Маршруты приложения
 @app.route('/')
 def index():
     return render_template('index.html',
-                         MIN_PIN_LENGTH=MIN_PIN_LENGTH,
-                         MAX_PIN_LENGTH=MAX_PIN_LENGTH)
+                           MIN_PIN_LENGTH=MIN_PIN_LENGTH,
+                           MAX_PIN_LENGTH=MAX_PIN_LENGTH)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -613,8 +690,6 @@ def admin_reports():
     return render_template('admin_reports.html', reports=reports)
 
 
-# API маршруты
-
 @app.route('/admin/access_rights')
 @login_required
 @admin_required
@@ -651,12 +726,24 @@ def admin_access_rights():
                            employees=employees,
                            laboratories=laboratories)
 
+
 @app.route('/admin/import_export')
 @login_required
 @admin_required
 def admin_import_export():
     """Страница импорта/экспорта данных"""
     return render_template('admin_import_export.html')
+
+
+@app.route('/admin/statistics')
+@login_required
+@admin_required
+def admin_statistics():
+    """Страница статистики с графиками"""
+    return render_template('admin_statistics.html')
+
+
+# API маршруты
 @app.route('/api/verify_access', methods=['POST'])
 def api_verify_access():
     """API для проверки доступа через терминал"""
@@ -722,13 +809,206 @@ def api_verify_access():
             'message': 'Внутренняя ошибка сервера'
         }), 500
 
-@app.route('/admin/statistics')
+
+@app.route('/api/admin/export/pdf/pdfkit', methods=['POST'])
 @login_required
 @admin_required
-def admin_statistics():
-    """Страница статистики с графиками"""
-    return render_template('admin_statistics.html')
+def api_export_pdf_pdfkit():
+    """Экспорт в PDF с использованием pdfkit и wkhtmltopdf"""
+    try:
+        import pdfkit
+        import tempfile
+        import os
+    except ImportError:
+        return jsonify({
+            'success': False,
+            'message': 'Для экспорта в PDF требуется установить библиотеку pdfkit: pip install pdfkit'
+        }), 500
 
+    # Проверяем наличие wkhtmltopdf
+    try:
+        # Пробуем найти wkhtmltopdf в системе
+        wkhtmltopdf_path = None
+        possible_paths = [
+            '/usr/bin/wkhtmltopdf',
+            '/usr/local/bin/wkhtmltopdf',
+            'C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe',
+            'wkhtmltopdf'  # Если в PATH
+        ]
+
+        for path in possible_paths:
+            if os.path.exists(path):
+                wkhtmltopdf_path = path
+                break
+
+        if not wkhtmltopdf_path:
+            return jsonify({
+                'success': False,
+                'message': 'Не найден wkhtmltopdf. Установите его с https://wkhtmltopdf.org/'
+            }), 500
+    except:
+        return jsonify({
+            'success': False,
+            'message': 'Не удалось найти wkhtmltopdf. Установите его с https://wkhtmltopdf.org/'
+        }), 500
+
+    data = request.get_json()
+    report_type = data.get('type', 'daily')
+    report_name = data.get('name', 'Отчет АСКУД')
+    date_start = data.get('period_start')
+    date_end = data.get('period_end')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Определяем период
+    if report_type == 'daily':
+        date_start = date_end = datetime.now().strftime('%Y-%m-%d')
+    elif report_type == 'weekly':
+        date_end = datetime.now().strftime('%Y-%m-%d')
+        date_start = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+    elif report_type == 'monthly':
+        date_end = datetime.now().strftime('%Y-%m-%d')
+        date_start = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+
+    # Получаем данные
+    query = '''
+        SELECT 
+            ae.event_time,
+            e.full_name,
+            e.department,
+            l.name as laboratory,
+            ae.event_type,
+            ae.success,
+            ae.reason
+        FROM access_events ae
+        JOIN employees e ON ae.employee_id = e.id
+        JOIN laboratories l ON ae.laboratory_id = l.id
+        WHERE DATE(ae.event_time) BETWEEN ? AND ?
+        ORDER BY ae.event_time DESC
+        LIMIT 200
+    '''
+
+    cursor.execute(query, (date_start, date_end))
+    events = [dict(row) for row in cursor.fetchall()]
+
+    conn.close()
+
+    # Создаем HTML
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{report_name}</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; padding: 20px; }}
+            h1 {{ text-align: center; color: #333; }}
+            .header {{ text-align: center; margin-bottom: 30px; color: #666; }}
+            .stats {{ background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+            th {{ background-color: #4a6fa5; color: white; padding: 12px; text-align: left; }}
+            td {{ padding: 10px; border-bottom: 1px solid #ddd; }}
+            tr:nth-child(even) {{ background-color: #f9f9f9; }}
+            .success {{ color: green; }}
+            .failure {{ color: red; }}
+            .footer {{ margin-top: 40px; text-align: center; color: #888; font-style: italic; }}
+        </style>
+    </head>
+    <body>
+        <h1>{report_name}</h1>
+        <div class="header">
+            <p>Период: {date_start} - {date_end}</p>
+            <p>Дата генерации: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        </div>
+
+        <h3>События доступа:</h3>
+    """
+
+    if events:
+        html_content += """
+        <table>
+            <tr>
+                <th>Дата/Время</th>
+                <th>Сотрудник</th>
+                <th>Лаборатория</th>
+                <th>Тип</th>
+                <th>Статус</th>
+                <th>Причина</th>
+            </tr>
+        """
+
+        for event in events:
+            event_time = event['event_time'][:16]
+            full_name = event['full_name']
+            laboratory = event['laboratory']
+            event_type = 'Вход' if event['event_type'] == 'entry' else 'Выход'
+            status_class = 'success' if event['success'] else 'failure'
+            status_text = '✓ Успех' if event['success'] else '✗ Отказ'
+            reason = event['reason'] or ''
+
+            html_content += f"""
+            <tr>
+                <td>{event_time}</td>
+                <td>{full_name}</td>
+                <td>{laboratory}</td>
+                <td>{event_type}</td>
+                <td class="{status_class}">{status_text}</td>
+                <td>{reason[:50]}{'...' if len(reason) > 50 else ''}</td>
+            </tr>
+            """
+
+        html_content += """
+        </table>
+        """
+    else:
+        html_content += "<p>Нет данных за указанный период</p>"
+
+    html_content += f"""
+        <div class="footer">
+            <p>Сгенерировано системой контроля доступа АСКУД</p>
+            <p>Всего записей: {len(events)}</p>
+        </div>
+    </body>
+    </html>
+    """
+
+    # Конвертируем HTML в PDF
+    try:
+        options = {
+            'page-size': 'A4',
+            'margin-top': '0.75in',
+            'margin-right': '0.75in',
+            'margin-bottom': '0.75in',
+            'margin-left': '0.75in',
+            'encoding': "UTF-8",
+            'no-outline': None,
+            'quiet': ''
+        }
+
+        # Создаем временный файл для PDF
+        pdf_buffer = io.BytesIO()
+
+        # Используем pdfkit с путем к wkhtmltopdf
+        config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+        pdf = pdfkit.from_string(html_content, False, options=options, configuration=config)
+
+        pdf_buffer.write(pdf)
+        pdf_buffer.seek(0)
+
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'{report_name}_{datetime.now().strftime("%Y%m%d")}.pdf'
+        )
+
+    except Exception as e:
+        print(f"Ошибка при создании PDF с pdfkit: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при создании PDF: {str(e)}'
+        }), 500
 
 @app.route('/api/admin/statistics/charts')
 @login_required
@@ -971,7 +1251,7 @@ def api_statistics_charts():
                 'denials_change': calculate_change(total_stats['denials'] or 0, prev_stats['prev_denials'] or 0),
                 'time_change': 0,  # Для простоты
                 'events_trend': 'up' if (total_stats['total_events'] or 0) > (
-                            prev_stats['prev_events'] or 0) else 'down',
+                        prev_stats['prev_events'] or 0) else 'down',
                 'time_trend': 'up'
             }
         })
@@ -979,6 +1259,66 @@ def api_statistics_charts():
     except Exception as e:
         print(f"Ошибка при получении статистики для графиков: {e}")
         traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/employee/schedule')
+@login_required
+def api_employee_schedule():
+    """API для получения расписания текущего сотрудника"""
+    try:
+        employee_id = session['user_id']
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Получаем расписание сотрудника
+        cursor.execute('''
+            SELECT 
+                a.id,
+                l.name as laboratory_name,
+                l.code as laboratory_code,
+                a.days_of_week,
+                a.time_start,
+                a.time_end
+            FROM access_schedules a
+            JOIN laboratories l ON a.laboratory_id = l.id
+            WHERE a.employee_id = ?
+            ORDER BY l.name
+        ''', (employee_id,))
+
+        schedule_data = []
+        for row in cursor.fetchall():
+            item = dict(row)
+
+            # Преобразуем строку дней в список названий
+            days_list = []
+            if item['days_of_week']:
+                try:
+                    # Парсим строку типа "0,1,2,3,4"
+                    day_numbers = [int(d.strip()) for d in item['days_of_week'].split(',') if d.strip().isdigit()]
+                    day_names = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+                    days_list = [day_names[day_num] for day_num in day_numbers if 0 <= day_num < 7]
+                except Exception as e:
+                    print(f"Ошибка парсинга дней недели: {e}")
+                    days_list = []
+
+            item['days_list'] = days_list
+            item['days_text'] = ', '.join(days_list) if days_list else 'Не указаны'
+            schedule_data.append(item)
+
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'schedule': schedule_data
+        })
+
+    except Exception as e:
+        print(f"Ошибка при получении расписания сотрудника: {e}")
         return jsonify({
             'success': False,
             'message': str(e)
@@ -1035,7 +1375,8 @@ def api_laboratories():
         for row in cursor.fetchall():
             lab = dict(row)
             # Рассчитываем процент заполненности
-            lab['occupancy_percent'] = round((lab['current_count'] / lab['capacity']) * 100) if lab['capacity'] and lab['capacity'] > 0 else 0
+            lab['occupancy_percent'] = round((lab['current_count'] / lab['capacity']) * 100) if lab['capacity'] and lab[
+                'capacity'] > 0 else 0
             laboratories.append(lab)
 
         conn.close()
@@ -1106,49 +1447,88 @@ def api_add_access_rule():
         data = request.get_json()
 
         # Проверка обязательных полей
-        required_fields = ['employee_id', 'laboratory_id', 'days_of_week', 'time_start', 'time_end']
+        required_fields = ['laboratory_id', 'days_of_week', 'time_start', 'time_end']
         for field in required_fields:
             if field not in data:
                 return jsonify({'success': False, 'message': f'Не указано поле: {field}'}), 400
+
+        # Проверяем, есть ли employee_id в данных или он должен быть в URL
+        if 'employee_id' not in data:
+            return jsonify({'success': False, 'message': 'Не указан ID сотрудника'}), 400
+
+        employee_id = data['employee_id']
+        laboratory_id = data['laboratory_id']
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
         # Проверяем существование сотрудника
-        cursor.execute("SELECT id FROM employees WHERE id = ?", (data['employee_id'],))
+        cursor.execute("SELECT id FROM employees WHERE id = ?", (employee_id,))
         if not cursor.fetchone():
             conn.close()
             return jsonify({'success': False, 'message': 'Сотрудник не найден'}), 404
 
         # Проверяем существование лаборатории
-        cursor.execute("SELECT id FROM laboratories WHERE id = ?", (data['laboratory_id'],))
+        cursor.execute("SELECT id FROM laboratories WHERE id = ?", (laboratory_id,))
         if not cursor.fetchone():
             conn.close()
             return jsonify({'success': False, 'message': 'Лаборатория не найдена'}), 404
 
-        # Добавляем правила для каждого дня недели
-        for day in data['days_of_week']:
+        # Преобразуем список дней в строку
+        days_str = ','.join(map(str, data['days_of_week']))
+
+        # Проверяем, существует ли уже запись для этого сотрудника и лаборатории
+        cursor.execute('''
+            SELECT id FROM access_schedules 
+            WHERE employee_id = ? AND laboratory_id = ?
+        ''', (employee_id, laboratory_id))
+
+        existing = cursor.fetchone()
+
+        if existing:
+            # Обновляем существующую запись
             cursor.execute('''
-                INSERT INTO access_schedules (employee_id, laboratory_id, day_of_week, time_start, time_end)
+                UPDATE access_schedules 
+                SET days_of_week = ?, time_start = ?, time_end = ?
+                WHERE id = ?
+            ''', (days_str, data['time_start'], data['time_end'], existing['id']))
+        else:
+            # Добавляем новую запись
+            cursor.execute('''
+                INSERT INTO access_schedules (employee_id, laboratory_id, days_of_week, time_start, time_end)
                 VALUES (?, ?, ?, ?, ?)
-            ''', (
-                data['employee_id'],
-                data['laboratory_id'],
-                int(day),
-                data['time_start'],
-                data['time_end']
-            ))
+            ''', (employee_id, laboratory_id, days_str,
+                  data['time_start'], data['time_end']))
 
         conn.commit()
         conn.close()
 
-        return jsonify({'success': True, 'message': 'Правило доступа добавлено'})
+        return jsonify({'success': True, 'message': 'Правило доступа обновлено'})
 
     except Exception as e:
         print(f"Ошибка при добавлении правила доступа: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@app.context_processor
+def inject_theme():
+    """Инжектирует настройки темы во все шаблоны"""
+    return {
+        'theme': request.cookies.get('theme', 'light'),
+        'MIN_PIN_LENGTH': MIN_PIN_LENGTH,
+        'MAX_PIN_LENGTH': MAX_PIN_LENGTH
+    }
+
+
+@app.route('/api/theme', methods=['POST'])
+def set_theme():
+    """Установить тему"""
+    data = request.get_json()
+    theme = data.get('theme', 'light')
+
+    response = jsonify({'success': True, 'theme': theme})
+    response.set_cookie('theme', theme, max_age=365 * 24 * 60 * 60)
+    return response
 @app.route('/api/admin/access_rule/<int:rule_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 @admin_required
@@ -1174,17 +1554,13 @@ def api_access_rule_detail(rule_id):
                 conn.close()
                 return jsonify({'success': False, 'message': 'Правило не найдено'}), 404
 
-            # Получаем все дни недели для этого правила (если есть несколько записей)
-            cursor.execute('''
-                SELECT day_of_week 
-                FROM access_schedules 
-                WHERE employee_id = ? AND laboratory_id = ? AND time_start = ? AND time_end = ?
-            ''', (rule['employee_id'], rule['laboratory_id'], rule['time_start'], rule['time_end']))
-
-            days = [row['day_of_week'] for row in cursor.fetchall()]
+            # Преобразуем строку дней в список
+            days_list = []
+            if rule['days_of_week']:
+                days_list = [int(d) for d in rule['days_of_week'].split(',') if d.isdigit()]
 
             rule_data = dict(rule)
-            rule_data['days_of_week'] = days
+            rule_data['days_of_week'] = days_list
 
             conn.close()
             return jsonify({'success': True, 'rule': rule_data})
@@ -1199,21 +1575,15 @@ def api_access_rule_detail(rule_id):
                 conn.close()
                 return jsonify({'success': False, 'message': 'Правило не найдено'}), 404
 
-            # Удаляем старые записи для этого правила
-            cursor.execute("DELETE FROM access_schedules WHERE id = ?", (rule_id,))
+            # Преобразуем список дней в строку
+            days_str = ','.join(map(str, data.get('days_of_week', [])))
 
-            # Добавляем обновленные записи для каждого дня недели
-            for day in data.get('days_of_week', []):
-                cursor.execute('''
-                    INSERT INTO access_schedules (employee_id, laboratory_id, day_of_week, time_start, time_end)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (
-                    data['employee_id'],
-                    data['laboratory_id'],
-                    int(day),
-                    data['time_start'],
-                    data['time_end']
-                ))
+            # Обновляем запись
+            cursor.execute('''
+                UPDATE access_schedules 
+                SET days_of_week = ?, time_start = ?, time_end = ?
+                WHERE id = ?
+            ''', (days_str, data['time_start'], data['time_end'], rule_id))
 
             conn.commit()
             conn.close()
@@ -1233,7 +1603,7 @@ def api_access_rule_detail(rule_id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-# API для получения всех правил доступа сотрудника (уже есть, но нужно его улучшить)
+# API для получения всех правил доступа сотрудника
 @app.route('/api/admin/employees/<int:employee_id>/access', methods=['GET'])
 @login_required
 @admin_required
@@ -1255,22 +1625,27 @@ def api_employee_access_rules(employee_id):
                 asch.id,
                 asch.laboratory_id,
                 l.name as laboratory_name,
+                l.code as laboratory_code,
                 asch.time_start,
                 asch.time_end,
-                GROUP_CONCAT(asch.day_of_week) as days_of_week
+                asch.days_of_week
             FROM access_schedules asch
             JOIN laboratories l ON asch.laboratory_id = l.id
             WHERE asch.employee_id = ?
-            GROUP BY asch.laboratory_id, asch.time_start, asch.time_end
             ORDER BY l.name
         ''', (employee_id,))
 
         access_rules = []
         for row in cursor.fetchall():
             rule = dict(row)
-            # Преобразуем дни недели в список
+            # Преобразуем строку дней в список чисел
             if rule['days_of_week']:
-                rule['days_of_week'] = rule['days_of_week'].split(',')
+                try:
+                    # Ожидаем формат "0,1,2,3,4"
+                    days_list = rule['days_of_week'].split(',')
+                    rule['days_of_week'] = [int(day.strip()) for day in days_list if day.strip().isdigit()]
+                except (ValueError, AttributeError):
+                    rule['days_of_week'] = []
             else:
                 rule['days_of_week'] = []
             access_rules.append(rule)
@@ -1559,7 +1934,7 @@ def api_statistics():
                 'labs_change': 0,
                 'time_change': 0,
                 'events_trend': 'up' if (total_stats['total_events'] or 0) > (
-                            prev_stats['prev_events'] or 0) else 'down',
+                        prev_stats['prev_events'] or 0) else 'down',
                 'time_trend': 'up'
             }
         })
@@ -1646,6 +2021,8 @@ def get_monthly_data(cursor, date_from, date_to):
         'total_exits': sum(exits),
         'avg_daily': sum(entries) / (len(entries) * 30) if entries else 0
     }
+
+
 @app.route('/api/admin/laboratories', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -1739,7 +2116,7 @@ def api_admin_laboratories():
 @app.route('/api/admin/laboratories/<int:laboratory_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 @admin_required
-def api_admin_laboratory_detail(laboratory_id):  # БЫЛО: def api_laboratory_detail(laboratory_id):
+def api_admin_laboratory_detail(laboratory_id):
     """API для получения, обновления или удаления лаборатории (админ)"""
     try:
         conn = get_db_connection()
@@ -1772,9 +2149,9 @@ def api_admin_laboratory_detail(laboratory_id):  # БЫЛО: def api_laboratory_
                     e.full_name,
                     e.department,
                     e.position,
-                    GROUP_CONCAT(a.day_of_week) as days,
-                    MIN(a.time_start) as earliest_start,
-                    MAX(a.time_end) as latest_end
+                    a.days_of_week as days,
+                    a.time_start as earliest_start,
+                    a.time_end as latest_end
                 FROM employees e
                 JOIN access_schedules a ON e.id = a.employee_id
                 WHERE a.laboratory_id = ?
@@ -1895,6 +2272,8 @@ def api_admin_laboratory_detail(laboratory_id):  # БЫЛО: def api_laboratory_
     except Exception as e:
         print(f"Ошибка при работе с лабораторией: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/api/admin/employees/<int:employee_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 @admin_required
@@ -1929,13 +2308,12 @@ def api_employee_detail(employee_id):
                 SELECT 
                     a.laboratory_id,
                     l.name as laboratory_name,
-                    GROUP_CONCAT(a.day_of_week) as days_of_week,
-                    MIN(a.time_start) as time_start,
-                    MAX(a.time_end) as time_end
+                    a.days_of_week,
+                    a.time_start,
+                    a.time_end
                 FROM access_schedules a
                 JOIN laboratories l ON a.laboratory_id = l.id
                 WHERE a.employee_id = ?
-                GROUP BY a.laboratory_id, a.time_start, a.time_end
                 ORDER BY l.name
             ''', (employee_id,))
 
@@ -1954,10 +2332,10 @@ def api_employee_detail(employee_id):
 
             # Также получаем список ID лабораторий для удобства
             cursor.execute('''
-                            SELECT DISTINCT laboratory_id 
-                            FROM access_schedules 
-                            WHERE employee_id = ?
-                        ''', (employee_id,))
+                SELECT DISTINCT laboratory_id 
+                FROM access_schedules 
+                WHERE employee_id = ?
+            ''', (employee_id,))
 
             lab_ids = [row['laboratory_id'] for row in cursor.fetchall()]
             employee_data['laboratory_ids'] = lab_ids
@@ -2096,7 +2474,7 @@ def api_employee_access(employee_id):
                 FROM access_schedules a
                 JOIN laboratories l ON a.laboratory_id = l.id
                 WHERE a.employee_id = ?
-                ORDER BY l.name, a.day_of_week
+                ORDER BY l.name
             ''', (employee_id,))
 
             access_rights = [dict(row) for row in cursor.fetchall()]
@@ -2123,7 +2501,7 @@ def api_employee_access(employee_id):
             # Добавление/обновление прав доступа
             data = request.get_json()
 
-            required_fields = ['laboratory_id', 'day_of_week', 'time_start', 'time_end']
+            required_fields = ['laboratory_id', 'days_of_week', 'time_start', 'time_end']
             for field in required_fields:
                 if field not in data:
                     conn.close()
@@ -2138,11 +2516,14 @@ def api_employee_access(employee_id):
                 conn.close()
                 return jsonify({'success': False, 'message': 'Лаборатория не найдена'}), 404
 
-            # Проверяем, существует ли уже запись для этого дня и лаборатории
+            # Преобразуем список дней в строку
+            days_str = ','.join(map(str, data['days_of_week']))
+
+            # Проверяем, существует ли уже запись для этого сотрудника и лаборатории
             cursor.execute('''
                 SELECT id FROM access_schedules 
-                WHERE employee_id = ? AND laboratory_id = ? AND day_of_week = ?
-            ''', (employee_id, data['laboratory_id'], data['day_of_week']))
+                WHERE employee_id = ? AND laboratory_id = ?
+            ''', (employee_id, data['laboratory_id']))
 
             existing = cursor.fetchone()
 
@@ -2150,15 +2531,15 @@ def api_employee_access(employee_id):
                 # Обновляем существующую запись
                 cursor.execute('''
                     UPDATE access_schedules 
-                    SET time_start = ?, time_end = ?
+                    SET days_of_week = ?, time_start = ?, time_end = ?
                     WHERE id = ?
-                ''', (data['time_start'], data['time_end'], existing['id']))
+                ''', (days_str, data['time_start'], data['time_end'], existing['id']))
             else:
                 # Добавляем новую запись
                 cursor.execute('''
-                    INSERT INTO access_schedules (employee_id, laboratory_id, day_of_week, time_start, time_end)
+                    INSERT INTO access_schedules (employee_id, laboratory_id, days_of_week, time_start, time_end)
                     VALUES (?, ?, ?, ?, ?)
-                ''', (employee_id, data['laboratory_id'], data['day_of_week'],
+                ''', (employee_id, data['laboratory_id'], days_str,
                       data['time_start'], data['time_end']))
 
             conn.commit()
@@ -2208,13 +2589,14 @@ def api_generate_report():
     try:
         data = request.get_json()
         report_type = data.get('type', 'daily')
+        report_name = data.get('name', 'Отчет АСКУД')
         period_start = data.get('period_start')
         period_end = data.get('period_end')
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Генерация отчета в зависимости от типа
+        # Определяем период и SQL-запрос в зависимости от типа отчета
         if report_type == 'daily':
             # Отчет за день
             query = '''
@@ -2230,27 +2612,13 @@ def api_generate_report():
                 GROUP BY DATE(ae.event_time), e.full_name, l.name, ae.event_type
                 ORDER BY date, e.full_name
             '''
+            params = ()
             filename = f'report_daily_{datetime.now().strftime("%Y%m%d")}.csv'
 
-        elif report_type == 'monthly':
-            # Отчет за месяц
-            query = '''
-                SELECT strftime('%Y-%m', ae.event_time) as month,
-                       e.department,
-                       l.name as laboratory,
-                       ae.event_type,
-                       COUNT(*) as count
-                FROM access_events ae
-                JOIN employees e ON ae.employee_id = e.id
-                JOIN laboratories l ON ae.laboratory_id = l.id
-                WHERE strftime('%Y-%m', ae.event_time) = strftime('%Y-%m', 'now')
-                GROUP BY month, e.department, l.name, ae.event_type
-                ORDER BY month, e.department
-            '''
-            filename = f'report_monthly_{datetime.now().strftime("%Y%m")}.csv'
-
-        elif report_type == 'custom':
-            # Пользовательский отчет
+        elif report_type == 'weekly':
+            # Отчет за неделю
+            week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+            today = datetime.now().strftime('%Y-%m-%d')
             query = '''
                 SELECT ae.event_time,
                        e.full_name,
@@ -2265,30 +2633,102 @@ def api_generate_report():
                 WHERE DATE(ae.event_time) BETWEEN ? AND ?
                 ORDER BY ae.event_time
             '''
-            filename = f'report_custom_{period_start}_to_{period_end}.csv'
-            cursor.execute(query, (period_start, period_end))
-        else:
-            cursor.execute(query)
+            params = (week_ago, today)
+            filename = f'report_weekly_{week_ago}_to_{today}.csv'
 
+        elif report_type == 'monthly':
+            # Отчет за месяц
+            month_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            today = datetime.now().strftime('%Y-%m-%d')
+            query = '''
+                SELECT ae.event_time,
+                       e.full_name,
+                       e.department,
+                       l.name as laboratory,
+                       ae.event_type,
+                       ae.success,
+                       ae.reason
+                FROM access_events ae
+                JOIN employees e ON ae.employee_id = e.id
+                JOIN laboratories l ON ae.laboratory_id = l.id
+                WHERE DATE(ae.event_time) BETWEEN ? AND ?
+                ORDER BY ae.event_time
+            '''
+            params = (month_ago, today)
+            filename = f'report_monthly_{datetime.now().strftime("%Y%m")}.csv'
+
+        elif report_type == 'custom':
+            # Пользовательский отчет
+            if not period_start or not period_end:
+                return jsonify({'success': False, 'message': 'Укажите период для отчета'}), 400
+
+            query = '''
+                SELECT ae.event_time,
+                       e.full_name,
+                       e.department,
+                       l.name as laboratory,
+                       ae.event_type,
+                       ae.success,
+                       ae.reason
+                FROM access_events ae
+                JOIN employees e ON ae.employee_id = e.id
+                JOIN laboratories l ON ae.laboratory_id = l.id
+                WHERE DATE(ae.event_time) BETWEEN ? AND ?
+                ORDER BY ae.event_time
+            '''
+            params = (period_start, period_end)
+            filename = f'report_custom_{period_start}_to_{period_end}.csv'
+        else:
+            # Для других типов используем дневной отчет
+            query = '''
+                SELECT ae.event_time,
+                       e.full_name,
+                       e.department,
+                       l.name as laboratory,
+                       ae.event_type,
+                       ae.success,
+                       ae.reason
+                FROM access_events ae
+                JOIN employees e ON ae.employee_id = e.id
+                JOIN laboratories l ON ae.laboratory_id = l.id
+                WHERE DATE(ae.event_time) = DATE('now')
+                ORDER BY ae.event_time
+            '''
+            params = ()
+            filename = f'report_{report_type}_{datetime.now().strftime("%Y%m%d")}.csv'
+
+        # Выполняем запрос с параметрами
+        cursor.execute(query, params)
         rows = cursor.fetchall()
 
         # Создаем CSV в памяти
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # Заголовки
+        # Если есть данные, получаем заголовки из первой строки
         if rows:
-            writer.writerow(rows[0].keys())
+            # Получаем ключи из первого ряда
+            keys = rows[0].keys()
+            writer.writerow(keys)
 
-        # Данные
-        for row in rows:
-            writer.writerow(row.values())
+            # Записываем данные
+            for row in rows:
+                writer.writerow([row[key] for key in keys])
+        else:
+            # Если данных нет, создаем заголовки по умолчанию
+            if report_type in ['daily', 'weekly', 'monthly', 'custom']:
+                headers = ['Дата и время', 'Сотрудник', 'Отдел', 'Лаборатория', 'Событие', 'Статус', 'Причина']
+            else:
+                headers = ['date', 'full_name', 'laboratory', 'event_type', 'count']
+            writer.writerow(headers)
+            writer.writerow(['Нет данных за выбранный период'])
 
         # Сохраняем отчет в базе
         cursor.execute('''
             INSERT INTO reports (name, report_type, period_start, period_end, created_by)
             VALUES (?, ?, ?, ?, ?)
-        ''', (filename, report_type, period_start, period_end, session['user_id']))
+        ''', (filename, report_type, period_start or datetime.now().strftime('%Y-%m-%d'),
+              period_end or datetime.now().strftime('%Y-%m-%d'), session['user_id']))
 
         conn.commit()
         conn.close()
@@ -2303,8 +2743,8 @@ def api_generate_report():
         )
 
     except Exception as e:
+        print(f"Ошибка при генерации отчета: {e}")
         return jsonify({'success': False, 'message': str(e)})
-
 
 @app.route('/api/admin/export/excel')
 @login_required
@@ -2312,6 +2752,12 @@ def api_generate_report():
 def api_export_excel():
     """Экспорт данных в Excel формате"""
     try:
+        if not HAS_PANDAS:
+            return jsonify({
+                'success': False,
+                'message': 'Для экспорта в Excel требуется установить библиотеки pandas и openpyxl'
+            }), 500
+
         import pandas as pd
         import io
 
@@ -2393,21 +2839,15 @@ def api_download_report(report_id):
 
         cursor.execute('SELECT * FROM reports WHERE id = ?', (report_id,))
         report = cursor.fetchone()
+        conn.close()
 
         if not report:
-            conn.close()
             return jsonify({'success': False, 'message': 'Отчёт не найден'}), 404
 
-        # Пока возвращаем только CSV отчёты
-        if report['file_path'] and os.path.exists(report['file_path']):
-            return send_file(
-                report['file_path'],
-                as_attachment=True,
-                download_name=report['name']
-            )
-        else:
-            # Генерируем CSV на лету
-            return generate_report_file(report)
+        report_dict = dict(report)
+
+        # Генерируем отчет на лету
+        return generate_report_file(report_dict)
 
     except Exception as e:
         print(f"Ошибка при скачивании отчёта: {e}")
@@ -2422,7 +2862,10 @@ def generate_report_file(report):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Определяем период для отчёта
+    # Определяем запрос и параметры в зависимости от типа отчета
+    query = ''
+    params = ()
+
     if report['report_type'] == 'daily':
         date_filter = datetime.now().strftime('%Y-%m-%d')
         query = '''
@@ -2433,22 +2876,11 @@ def generate_report_file(report):
             WHERE DATE(ae.event_time) = ?
             ORDER BY ae.event_time
         '''
-        cursor.execute(query, (date_filter,))
+        params = (date_filter,)
+
     elif report['report_type'] == 'weekly':
         week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
-        query = '''
-            SELECT ae.event_time, e.full_name, l.name, ae.event_type, ae.success, ae.reason
-            FROM access_events ae
-            JOIN employees e ON ae.employee_id = e.id
-            JOIN laboratories l ON ae.laboratory_id = l.id
-            WHERE DATE(ae.event_time) >= ?
-            ORDER BY ae.event_time
-        '''
-        cursor.execute(query, (week_ago,))
-    elif report['report_type'] == 'monthly':
-        month_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-        cursor.execute(query, (month_ago,))
-    elif report['report_type'] == 'custom':
+        today = datetime.now().strftime('%Y-%m-%d')
         query = '''
             SELECT ae.event_time, e.full_name, l.name, ae.event_type, ae.success, ae.reason
             FROM access_events ae
@@ -2457,8 +2889,50 @@ def generate_report_file(report):
             WHERE DATE(ae.event_time) BETWEEN ? AND ?
             ORDER BY ae.event_time
         '''
-        cursor.execute(query, (report['period_start'], report['period_end']))
+        params = (week_ago, today)
 
+    elif report['report_type'] == 'monthly':
+        month_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        today = datetime.now().strftime('%Y-%m-%d')
+        query = '''
+            SELECT ae.event_time, e.full_name, l.name, ae.event_type, ae.success, ae.reason
+            FROM access_events ae
+            JOIN employees e ON ae.employee_id = e.id
+            JOIN laboratories l ON ae.laboratory_id = l.id
+            WHERE DATE(ae.event_time) BETWEEN ? AND ?
+            ORDER BY ae.event_time
+        '''
+        params = (month_ago, today)
+
+    elif report['report_type'] == 'custom':
+        if not report['period_start'] or not report['period_end']:
+            report['period_start'] = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+            report['period_end'] = datetime.now().strftime('%Y-%m-%d')
+
+        query = '''
+            SELECT ae.event_time, e.full_name, l.name, ae.event_type, ae.success, ae.reason
+            FROM access_events ae
+            JOIN employees e ON ae.employee_id = e.id
+            JOIN laboratories l ON ae.laboratory_id = l.id
+            WHERE DATE(ae.event_time) BETWEEN ? AND ?
+            ORDER BY ae.event_time
+        '''
+        params = (report['period_start'], report['period_end'])
+    else:
+        # По умолчанию дневной отчет
+        date_filter = datetime.now().strftime('%Y-%m-%d')
+        query = '''
+            SELECT ae.event_time, e.full_name, l.name, ae.event_type, ae.success, ae.reason
+            FROM access_events ae
+            JOIN employees e ON ae.employee_id = e.id
+            JOIN laboratories l ON ae.laboratory_id = l.id
+            WHERE DATE(ae.event_time) = ?
+            ORDER BY ae.event_time
+        '''
+        params = (date_filter,)
+
+    # Выполняем запрос
+    cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
 
@@ -2467,18 +2941,23 @@ def generate_report_file(report):
     writer = csv.writer(output)
 
     # Заголовки
-    writer.writerow(['Дата и время', 'Сотрудник', 'Лаборатория', 'Событие', 'Статус', 'Причина'])
+    headers = ['Дата и время', 'Сотрудник', 'Лаборатория', 'Событие', 'Статус', 'Причина']
+    writer.writerow(headers)
 
     # Данные
-    for row in rows:
-        writer.writerow([
-            row['event_time'],
-            row['full_name'],
-            row['name'],
-            'Вход' if row['event_type'] == 'entry' else 'Выход',
-            'Успешно' if row['success'] else 'Отказ',
-            row['reason'] or ''
-        ])
+    if rows:
+        for row in rows:
+            row_dict = dict(row)
+            writer.writerow([
+                row_dict['event_time'],
+                row_dict['full_name'],
+                row_dict['name'],
+                'Вход' if row_dict['event_type'] == 'entry' else 'Выход',
+                'Успешно' if row_dict['success'] else 'Отказ',
+                row_dict['reason'] or ''
+            ])
+    else:
+        writer.writerow(['Нет данных за выбранный период'])
 
     output.seek(0)
 
@@ -2486,8 +2965,10 @@ def generate_report_file(report):
         io.BytesIO(output.getvalue().encode('utf-8-sig')),
         mimetype='text/csv',
         as_attachment=True,
-        download_name=f"{report['name']}.csv"
+        download_name=f"{report['name'] or 'report'}.csv"
     )
+
+
 @app.route('/api/admin/export/csv')
 @login_required
 @admin_required
@@ -2544,14 +3025,14 @@ def api_export_csv():
 
             # 3. Экспорт прав доступа
             cursor.execute('''
-                SELECT id, employee_id, laboratory_id, day_of_week, time_start, time_end
+                SELECT id, employee_id, laboratory_id, days_of_week, time_start, time_end
                 FROM access_schedules
                 ORDER BY id
             ''')
 
             access_data = io.StringIO()
             writer = csv.writer(access_data)
-            writer.writerow(['id', 'employee_id', 'laboratory_id', 'day_of_week', 'time_start', 'time_end'])
+            writer.writerow(['id', 'employee_id', 'laboratory_id', 'days_of_week', 'time_start', 'time_end'])
 
             for row in cursor.fetchall():
                 writer.writerow(row)
@@ -2739,12 +3220,12 @@ def api_import_csv():
 
                     # Добавляем право доступа
                     cursor.execute('''
-                        INSERT INTO access_schedules (employee_id, laboratory_id, day_of_week, time_start, time_end)
+                        INSERT INTO access_schedules (employee_id, laboratory_id, days_of_week, time_start, time_end)
                         VALUES (?, ?, ?, ?, ?)
                     ''', (
                         int(row['employee_id']),
                         int(row['laboratory_id']),
-                        int(row.get('day_of_week', 0)),
+                        row.get('days_of_week', '0,1,2,3,4'),
                         row.get('time_start', '08:00'),
                         row.get('time_end', '18:00')
                     ))
@@ -3029,36 +3510,11 @@ def api_system_info():
 
     return jsonify({'success': True, 'info': info})
 
-if __name__ == '__main__':
-    init_database()
-    print(f"\n🚀 Запуск АСКУД версии 2.0")
-    print("📍 Главная страница: http://localhost:5000")
-    print("📍 Терминал доступа: http://localhost:5000/terminal")
-    print("📍 Панель управления: http://localhost:5000/admin")
-    print(f"📍 Тестовый администратор: логин 'admin', пароль 'admin123', PIN '0000'")
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
 
 @app.route('/api/statistics', methods=['GET'])
 def api_get_statistics():
     """
     Получение статистики системы
-    ---
-    tags:
-      - Статистика
-    responses:
-      200:
-        description: Статистика успешно получена
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Statistics'
-      500:
-        description: Ошибка сервера
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Error'
     """
     try:
         stats = get_statistics()
@@ -3136,39 +3592,12 @@ def api_admin_employees_post():
     except Exception as e:
         print(f"Ошибка при добавлении сотрудника: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/api/employees', methods=['GET'])
 def api_get_employees():
     """
     Получение списка сотрудников
-    ---
-    tags:
-      - Сотрудники
-    parameters:
-      - name: active_only
-        in: query
-        schema:
-          type: boolean
-        description: Только активные сотрудники
-      - name: limit
-        in: query
-        schema:
-          type: integer
-          minimum: 1
-          maximum: 100
-        description: Количество записей
-    responses:
-      200:
-        description: Список сотрудников
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/Employee'
-      401:
-        description: Неавторизован
-    security:
-      - session_auth: []
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -3202,18 +3631,6 @@ def api_get_employees():
 def api_get_laboratories():
     """
     Получение списка лабораторий
-    ---
-    tags:
-      - Лаборатории
-    responses:
-      200:
-        description: Список лабораторий
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/Laboratory'
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -3230,32 +3647,6 @@ def api_get_laboratories():
 def api_get_access_events():
     """
     Получение событий доступа
-    ---
-    tags:
-      - Доступ
-    parameters:
-      - name: limit
-        in: query
-        schema:
-          type: integer
-          minimum: 1
-          maximum: 100
-        description: Количество последних событий
-      - name: date
-        in: query
-        schema:
-          type: string
-          format: date
-        description: Дата событий (YYYY-MM-DD)
-    responses:
-      200:
-        description: Список событий доступа
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/AccessEvent'
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -3291,34 +3682,6 @@ def api_get_access_events():
 def api_get_current_presence():
     """
     Получение списка сотрудников в лабораториях
-    ---
-    tags:
-      - Доступ
-    responses:
-      200:
-        description: Список текущих посетителей
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                count:
-                  type: integer
-                  example: 12
-                employees:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      employee_id:
-                        type: integer
-                      full_name:
-                        type: string
-                      lab_name:
-                        type: string
-                      entry_time:
-                        type: string
-                        format: date-time
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -3346,40 +3709,6 @@ def api_get_current_presence():
 def api_check_access():
     """
     Проверка доступа по PIN-коду
-    ---
-    tags:
-      - Доступ
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              pin_code:
-                type: string
-                example: "1234"
-              laboratory_id:
-                type: integer
-                example: 1
-    responses:
-      200:
-        description: Результат проверки доступа
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                message:
-                  type: string
-                employee:
-                  $ref: '#/components/schemas/Employee'
-      400:
-        description: Неверный запрос
-      403:
-        description: Доступ запрещен
     """
     data = request.get_json()
 
@@ -3421,10 +3750,10 @@ def api_check_access():
         SELECT * FROM access_schedules 
         WHERE employee_id = ? 
         AND laboratory_id = ? 
-        AND day_of_week = ?
+        AND days_of_week LIKE ?
         AND time_start <= ? 
         AND time_end >= ?
-    ''', (employee_dict['id'], lab_id, day_of_week, current_time, current_time))
+    ''', (employee_dict['id'], lab_id, f'%{day_of_week}%', current_time, current_time))
 
     has_access = cursor.fetchone() is not None
 
@@ -3466,29 +3795,6 @@ def api_check_access():
 def api_health():
     """
     Проверка здоровья системы
-    ---
-    tags:
-      - Статистика
-    responses:
-      200:
-        description: Статус системы
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                status:
-                  type: string
-                  example: "healthy"
-                timestamp:
-                  type: string
-                  format: date-time
-                database:
-                  type: string
-                  example: "connected"
-                version:
-                  type: string
-                  example: "2.0"
     """
     try:
         # Проверка подключения к БД
@@ -3506,3 +3812,18 @@ def api_health():
         "database": db_status,
         "version": "2.0"
     })
+
+
+if __name__ == '__main__':
+    # Инициализируем базу данных
+    init_database()
+
+    # Запускаем миграцию старых данных
+    migrate_old_data()
+
+    print(f"\n🚀 Запуск АСКУД версии 2.0")
+    print("📍 Главная страница: http://localhost:5000")
+    print("📍 Терминал доступа: http://localhost:5000/terminal")
+    print("📍 Панель управления: http://localhost:5000/admin")
+    print(f"📍 Тестовый администратор: логин 'admin', пароль 'admin123', PIN '0000'")
+    app.run(debug=True, host='0.0.0.0', port=5000)

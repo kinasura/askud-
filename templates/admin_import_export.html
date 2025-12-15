@@ -5,6 +5,10 @@
 {% block page_title %}Импорт и экспорт данных{% endblock %}
 {% block page_subtitle %}Управление данными системы через CSV файлы{% endblock %}
 
+{% block page_actions %}
+<!-- Кнопку создания отчета удаляем отсюда -->
+{% endblock %}
+
 {% block content %}
 <div class="row">
     <!-- Экспорт данных -->
@@ -35,7 +39,7 @@
                 </div>
                 
                 <div class="d-grid">
-                    <a href="/api/admin/export/csv" class="btn btn-primary btn-lg py-3">
+                    <a href="/api/admin/export/csv" class="btn btn-primary btn-lg py-3 fw-bold text-white">
                         <i class="bi bi-file-earmark-zip"></i> Экспортировать все данные
                     </a>
                 </div>
@@ -69,7 +73,7 @@
                             </div>
                         </div>
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-success" id="importCsvBtn">
+                            <button type="submit" class="btn btn-success fw-bold text-white" id="importCsvBtn">
                                 <i class="bi bi-upload"></i> Импортировать CSV
                                 <span class="spinner-border spinner-border-sm d-none" id="csvSpinner"></span>
                             </button>
@@ -93,7 +97,7 @@
                     </div>
                     
                     <div class="d-grid">
-                        <button class="btn btn-warning" id="importZipBtn" disabled>
+                        <button class="btn btn-warning fw-bold" id="importZipBtn" disabled>
                             <i class="bi bi-upload"></i> Импортировать ZIP (в разработке)
                         </button>
                     </div>

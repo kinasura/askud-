@@ -6,20 +6,30 @@
 {% block page_subtitle %}Создание, просмотр и экспорт отчётов системы{% endblock %}
 
 {% block page_actions %}
-<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createReportModal">
-    <i class="bi bi-plus-circle"></i> Новый отчёт
-</button>
+<!-- Кнопка создания отчёта была здесь, теперь убрана -->
 {% endblock %}
 
 {% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">История отчётов</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
+            <i class="bi bi-plus-circle"></i> Создать отчёт
+        </button>
+    </div>
+</div>
+
 <div class="row">
     <!-- Быстрое создание отчётов -->
     <div class="col-md-4 mb-4">
         <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="bi bi-lightning"></i> Быстрые отчёты
                 </h5>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createReportModal">
+                    <i class="bi bi-plus-circle"></i> Новый отчёт
+                </button>
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
@@ -106,13 +116,14 @@
                                 <td>{{ report.generated_at[:16] }}</td>
                                 <td>{{ report.created_by_name or 'Система' }}</td>
                                 <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="#" class="btn btn-outline-primary" 
-                                           onclick="downloadReport({{ report.id }}, 'csv')">
-                                            <i class="bi bi-filetype-csv"></i>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="/api/admin/reports/{{ report.id }}/download" 
+                                        class="btn btn-primary" 
+                                        download 
+                                        onclick="showDownloadSpinner(this)">
+                                            <i class="bi bi-download"></i> Скачать
                                         </a>
-                                        <button class="btn btn-outline-danger" 
-                                                onclick="deleteReport({{ report.id }})">
+                                        <button class="btn btn-danger btn-sm" onclick="deleteReport({{ report.id }})">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
@@ -157,7 +168,7 @@
                         <h5>CSV Экспорт</h5>
                         <p class="small text-muted">Экспорт данных в формате CSV для анализа в Excel</p>
                         <div class="d-grid gap-2">
-                            <a href="/api/admin/export/csv" class="btn btn-success">
+                            <a href="/api/admin/export/csv" class="btn btn-success fw-bold text-white">
                                 <i class="bi bi-download"></i> Экспорт CSV
                             </a>
                         </div>
@@ -172,7 +183,7 @@
                         </div>
                         <h5>Excel Экспорт</h5>
                         <p class="small text-muted">Экспорт данных в формате Excel с форматированием</p>
-                        <button class="btn btn-primary" onclick="exportToExcel()">
+                        <button class="btn btn-primary fw-bold text-white" onclick="exportToExcel()">
                             <i class="bi bi-download"></i> Экспорт Excel
                         </button>
                     </div>
@@ -186,7 +197,7 @@
                         </div>
                         <h5>PDF Экспорт</h5>
                         <p class="small text-muted">Экспорт отчётов в PDF с графиками и таблицами</p>
-                        <button class="btn btn-danger" onclick="exportToPDF()">
+                        <button class="btn btn-danger fw-bold text-white" onclick="exportToPDF()">
                             <i class="bi bi-download"></i> Экспорт PDF
                         </button>
                     </div>
@@ -296,10 +307,62 @@
         </div>
     </div>
 </div>
+
+<style>
+    /* Исправление для текста на кнопках в темной теме */
+    [data-theme="dark"] .btn-primary,
+    [data-theme="dark"] .btn-success,
+    [data-theme="dark"] .btn-danger {
+        color: white !important;
+    }
+    
+    .fw-bold.text-white {
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    /* PDF Export Modal Styles */
+    #pdfExportModal .modal-dialog {
+        max-width: 500px;
+    }
+
+    #pdfExportModal .alert-info {
+        font-size: 0.9rem;
+        padding: 10px;
+        margin-top: 15px;
+    }
+
+    /* Notification styles */
+    .alert.position-fixed {
+        animation: slideInRight 0.3s ease-out;
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    // Показать спиннер при скачивании
+    function showDownloadSpinner(link) {
+        const originalHtml = link.innerHTML;
+        link.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Загрузка...';
+        link.disabled = true;
+        
+        // Через 3 секунды восстанавливаем кнопку чтоб не втыкала
+        setTimeout(() => {
+            link.innerHTML = originalHtml;
+            link.disabled = false;
+        }, 3000);
+    }
+    
     // Обновление списка отчётов
     function refreshReports() {
         fetch('/api/admin/reports/list')
@@ -342,6 +405,7 @@
                 `${report.period_start}${report.period_end && report.period_end !== report.period_start ? ' - ' + report.period_end : ''}` :
                 '<span class="text-muted">Не указан</span>';
             
+            // Используем тот же формат кнопок, что и в оригинальном HTML
             return `
                 <tr>
                     <td><strong>${report.name}</strong></td>
@@ -350,13 +414,14 @@
                     <td>${report.generated_at ? report.generated_at.slice(0, 16) : ''}</td>
                     <td>${report.created_by_name || 'Система'}</td>
                     <td>
-                        <div class="btn-group btn-group-sm">
-                            <a href="#" class="btn btn-outline-primary" 
-                               onclick="downloadReport(${report.id}, 'csv')">
-                                <i class="bi bi-filetype-csv"></i>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="/api/admin/reports/${report.id}/download" 
+                               class="btn btn-primary" 
+                               download 
+                               onclick="showDownloadSpinner(this)">
+                                <i class="bi bi-download"></i> Скачать
                             </a>
-                            <button class="btn btn-outline-danger" 
-                                    onclick="deleteReport(${report.id})">
+                            <button class="btn btn-danger btn-sm" onclick="deleteReport(${report.id})">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -380,6 +445,64 @@
         const reportName = document.getElementById('reportName').value || 'Отчёт';
         const reportType = document.getElementById('reportType').value;
         const exportFormat = document.getElementById('exportFormat').value;
+        
+        if (exportFormat === 'pdf') {
+            // Для PDF используем отдельный endpoint
+            const pdfData = {
+                type: reportType,
+                name: reportName
+            };
+            
+            if (reportType === 'custom') {
+                const dateStart = document.getElementById('dateStart').value;
+                const dateEnd = document.getElementById('dateEnd').value;
+                
+                if (!dateStart || !dateEnd) {
+                    alert('Заполните даты для произвольного периода');
+                    return;
+                }
+                
+                pdfData.period_start = dateStart;
+                pdfData.period_end = dateEnd;
+            }
+            
+            fetch('/api/admin/export/pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(pdfData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Ошибка сервера');
+                    });
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${reportName.replace(/\s+/g, '_')}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                const modal = bootstrap.Modal.getInstance(document.getElementById('createReportModal'));
+                modal.hide();
+                
+                showNotification('PDF отчет успешно создан', 'success');
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Ошибка при создании PDF отчета: ' + error.message);
+            });
+            
+            return;
+        }
         
         const reportData = {
             name: reportName,
@@ -487,12 +610,6 @@
         });
     }
     
-    // Скачивание отчёта
-    function downloadReport(reportId, format) {
-        // Временная заглушка - будет реализовано после создания API
-        alert('Функция скачивания будет реализована на следующем этапе');
-    }
-    
     // Удаление отчёта
     function deleteReport(reportId) {
         if (confirm('Вы уверены, что хотите удалить этот отчёт?')) {
@@ -502,14 +619,14 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    refreshReports();
+                    location.reload();
                 } else {
                     alert('Ошибка: ' + data.message);
                 }
             })
             .catch(error => {
-                console.error('Ошибка:', error);
-                alert('Ошибка при удалении отчёта');
+                console.error('Error:', error);
+                alert('Ошибка соединения с сервером');
             });
         }
     }
@@ -536,37 +653,231 @@
     
     // Экспорт в PDF
     function exportToPDF() {
-        // Покажем модальное окно с выбором опций для PDF
-        const exportContent = document.getElementById('exportContent');
-        exportContent.innerHTML = `
-            <div class="text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Загрузка...</span>
+        // Показать модальное окно с настройками PDF
+        const modalHtml = `
+            <div class="modal fade" id="pdfExportModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-filetype-pdf"></i> Экспорт в PDF
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Тип отчета</label>
+                                <select class="form-select" id="pdfReportType">
+                                    <option value="events">Детальный отчет по событиям</option>
+                                    <option value="summary">Сводный отчет</option>
+                                </select>
+                            </div>
+                            
+                            <div id="pdfEventsOptions">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Дата начала</label>
+                                        <input type="date" class="form-control" id="pdfDateStart" 
+                                               value="${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Дата окончания</label>
+                                        <input type="date" class="form-control" id="pdfDateEnd" 
+                                               value="${new Date().toISOString().split('T')[0]}">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Название отчета</label>
+                                    <input type="text" class="form-control" id="pdfReportName" 
+                                           value="Отчет АСКУД">
+                                </div>
+                            </div>
+                            
+                            <div id="pdfSummaryOptions" style="display: none;">
+                                <div class="mb-3">
+                                    <label class="form-label">Период анализа (дней)</label>
+                                    <select class="form-select" id="pdfPeriod">
+                                        <option value="7">7 дней</option>
+                                        <option value="30" selected>30 дней</option>
+                                        <option value="90">90 дней</option>
+                                        <option value="180">180 дней</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <small>
+                                    <strong>Детальный отчет</strong> - содержит список всех событий доступа за период.<br/>
+                                    <strong>Сводный отчет</strong> - содержит статистику и аналитику по системе.
+                                </small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                            <button type="button" class="btn btn-primary" onclick="generatePDF()">
+                                <i class="bi bi-download"></i> Создать PDF
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <p class="mt-2">Подготовка экспорта в PDF...</p>
             </div>
         `;
         
-        const modal = new bootstrap.Modal(document.getElementById('exportModal'));
+        // Добавляем модальное окно на страницу
+        if (!document.getElementById('pdfExportModal')) {
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        // Показываем модальное окно
+        const modal = new bootstrap.Modal(document.getElementById('pdfExportModal'));
         modal.show();
         
-        // Имитируем загрузку
-        setTimeout(() => {
-            exportContent.innerHTML = `
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i>
-                    <p>Экспорт в PDF будет реализован на следующем этапе. Сейчас доступен экспорт в CSV и Excel.</p>
-                    <p>Для создания PDF отчётов потребуется установка дополнительных библиотек.</p>
-                </div>
-                <div class="d-grid gap-2">
-                    <a href="/api/admin/export/csv" class="btn btn-success">
-                        <i class="bi bi-filetype-csv"></i> Экспортировать в CSV
-                    </a>
-                </div>
-            `;
+        // Обработчик изменения типа отчета
+        document.getElementById('pdfReportType').addEventListener('change', function() {
+            const isSummary = this.value === 'summary';
+            document.getElementById('pdfEventsOptions').style.display = isSummary ? 'none' : 'block';
+            document.getElementById('pdfSummaryOptions').style.display = isSummary ? 'block' : 'none';
+        });
+    }
+
+    function generatePDF() {
+        const reportType = document.getElementById('pdfReportType').value;
+        const pdfModal = bootstrap.Modal.getInstance(document.getElementById('pdfExportModal'));
+        
+        let url, data;
+        
+        if (reportType === 'events') {
+            const dateStart = document.getElementById('pdfDateStart').value;
+            const dateEnd = document.getElementById('pdfDateEnd').value;
+            const reportName = document.getElementById('pdfReportName').value || 'Отчет АСКУД';
             
-            document.getElementById('exportDownloadBtn').style.display = 'none';
-        }, 1000);
+            if (!dateStart || !dateEnd) {
+                alert('Заполните даты периода');
+                return;
+            }
+            
+            if (new Date(dateStart) > new Date(dateEnd)) {
+                alert('Дата начала не может быть позже даты окончания');
+                return;
+            }
+            
+            // Используем HTML-based PDF для лучшей поддержки Unicode
+            url = '/api/admin/export/pdf/html';  // или '/api/admin/export/pdf/pdfkit'
+            data = {
+                type: 'custom',
+                name: reportName,
+                period_start: dateStart,
+                period_end: dateEnd
+            };
+        } else {
+            const period = document.getElementById('pdfPeriod').value;
+            
+            url = '/api/admin/export/pdf/summary';
+            data = {
+                period: period
+            };
+        }
+        
+        // Показываем индикатор загрузки
+        const button = document.querySelector('#pdfExportModal .btn-primary');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Генерация...';
+        button.disabled = true;
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'Ошибка сервера');
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Проверяем, что это действительно PDF
+            if (blob.type !== 'application/pdf' && !blob.type.includes('pdf')) {
+                throw new Error('Получен некорректный файл');
+            }
+            
+            // Создаем URL для скачивания
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            if (reportType === 'events') {
+                const reportName = document.getElementById('pdfReportName').value || 'Отчет АСКУД';
+                a.download = `${reportName.replace(/\s+/g, '_')}.pdf`;
+            } else {
+                const period = document.getElementById('pdfPeriod').value;
+                a.download = `summary_report_${period}_days.pdf`;
+            }
+            
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // Восстанавливаем кнопку
+            button.innerHTML = originalText;
+            button.disabled = false;
+            
+            // Закрываем модальное окно
+            pdfModal.hide();
+            
+            // Показываем уведомление об успехе
+            showNotification('PDF отчет успешно создан и скачан', 'success');
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            
+            // Восстанавливаем кнопку
+            button.innerHTML = originalText;
+            button.disabled = false;
+            
+            alert('Ошибка при создании PDF: ' + error.message);
+        });
+    }
+
+    // Вспомогательная функция для уведомлений
+    function showNotification(message, type = 'info') {
+        const alertClass = {
+            'success': 'alert-success',
+            'error': 'alert-danger',
+            'info': 'alert-info',
+            'warning': 'alert-warning'
+        }[type];
+        
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = `
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        `;
+        
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Автоматически скрываем через 5 секунд
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
     }
     
     // Инициализация при загрузке страницы
